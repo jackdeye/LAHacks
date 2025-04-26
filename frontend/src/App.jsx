@@ -1,11 +1,13 @@
 import React from "react";
 import StateMap from "./components/StateMap.jsx";
+import Banner from "./components/Banner.jsx";
+import "./App.css";
 
 function App() {
   return (
-    <div>
-      <h1>US States Map</h1>
-      <div style={{ width: '100vw', height: '100vh' }}>
+    <div style={{ textAlign: 'center' }}>
+      <Banner />
+      <div className="map-container">
         <StateMap />
       </div>
     </div>

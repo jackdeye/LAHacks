@@ -122,16 +122,27 @@ def get_all_states(request):
             unique_states = StateTimeseries.objects.values_list(
                 "state_territory", flat=True
             ).distinct()
-            all_state_data = []
+            all_state_data = {}
+
+            history = request.GET.get("history") == "true"
 
             for state in unique_states:
-                latest_record = (
-                    StateTimeseries.objects.filter(state_territory=state)
-                    .order_by("-ending_date")
-                    .first()
-                )
-                if latest_record:
-                    all_state_data.append(model_to_dict(latest_record))
+                if history:
+                    state_history = StateTimeseries.objects.filter(
+                        state_territory=state
+                    ).order_by("ending_date")
+                    all_state_data[state] = [
+                        model_to_dict(record) for record in state_history
+                    ]
+                else:
+                    # Retrieve only the latest record for the state
+                    latest_record = (
+                        StateTimeseries.objects.filter(state_territory=state)
+                        .order_by("-ending_date")
+                        .first()
+                    )
+                    if latest_record:
+                        all_state_data[state] = model_to_dict(latest_record)
 
             if not all_state_data:
                 return JsonResponse({"error": "No state data found"}, status=404)

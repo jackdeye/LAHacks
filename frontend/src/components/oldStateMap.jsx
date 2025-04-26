@@ -79,10 +79,10 @@ function StateMap() {
 	});
 
 	const getStateColor = (stateName) => {
-		if (!stateMetrics || !stateMetrics[stateName]) return [200, 200, 200, 150];
+		if (!stateMetrics) return [200, 200, 200, 150];
 
-		const metric = stateMetrics[stateName];
-		if (metric.state_territory_wval === null) {
+		const metric = stateMetrics.find(m => m.state_territory === stateName);
+		if (!metric || metric.state_territory_wval === null) {
 			return [200, 200, 200, 150];
 		}
 
@@ -92,7 +92,7 @@ function StateMap() {
 
 
 	// Find min/max for legend
-	const wvals = stateMetrics ? Object.values(stateMetrics).map(m => m.state_territory_wval).filter(Number.isFinite) : [];
+	const wvals = stateMetrics?.map(m => m.state_territory_wval).filter(Number.isFinite);
 	const minVal = wvals?.length ? Math.min(...wvals) : 0;
 	const maxVal = wvals?.length ? Math.max(...wvals) : 5;
 
@@ -112,7 +112,7 @@ function StateMap() {
 				getTooltip={({ object }) => {
 					if (!object || !stateMetrics) return null;
 
-					const metric = stateMetrics[object.properties.NAME];
+					const metric = stateMetrics.find(m => m.state_territory === object.properties.NAME);
 					if (!metric) return null;
 
 					return {
