@@ -1,1 +1,36 @@
+# This is an auto-generated Django model module.
+# You'll have to do the following manually to clean this up:
+#   * Rearrange models' order
+#   * Make sure each model has one field with primary_key=True
+#   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
+#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
+# Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
+
+
+class CountyCurrent(models.Model):
+    state_territory = models.TextField(db_column='State/Territory', blank=True, null=True)  # Field name made lowercase. Field renamed to remove unsuitable characters.
+    sewershed_id = models.TextField(db_column='Sewershed_ID', blank=True, null=True)  # Field name made lowercase.
+    counties_served = models.TextField(db_column='Counties_Served', blank=True, null=True)  # Field name made lowercase.
+    population_served = models.TextField(db_column='Population_Served', blank=True, null=True)  # Field name made lowercase. This field type is a guess.
+    wval_category = models.TextField(db_column='WVAL_Category', blank=True, null=True)  # Field name made lowercase.
+    reporting_week = models.TextField(db_column='Reporting_Week', blank=True, null=True)  # Field name made lowercase.
+
+    class Meta:
+        managed = False
+        db_table = 'county_current'
+
+
+class StateTimeseries(models.Model):
+    state_territory = models.TextField(db_column='State/Territory', blank=True, null=True)  # Field name made lowercase. Field renamed to remove unsuitable characters.
+    week_ending_date = models.TextField(db_column='Week_Ending_Date', blank=True, null=True)  # Field name made lowercase.
+    data_collection_period = models.TextField(db_column='Data_Collection_Period', blank=True, null=True)  # Field name made lowercase.
+    state_territory_wval = models.TextField(db_column='State/Territory_WVAL', blank=True, null=True)  # Field name made lowercase. Field renamed to remove unsuitable characters. This field type is a guess.
+    national_wval = models.TextField(db_column='National_WVAL', blank=True, null=True)  # Field name made lowercase. This field type is a guess.
+    regional_wval = models.TextField(db_column='Regional_WVAL', blank=True, null=True)  # Field name made lowercase. This field type is a guess.
+    wval_category = models.TextField(db_column='WVAL_Category', blank=True, null=True)  # Field name made lowercase.
+    coverage = models.TextField(db_column='Coverage', blank=True, null=True)  # Field name made lowercase.
+
+    class Meta:
+        managed = False
+        db_table = 'state_timeseries'
