@@ -141,7 +141,10 @@ function StateMap() {
 			lineWidthMinPixels: 1,
 			onHover: ({ object }) => setHoveredState(object),
 			autoHighlight: true,
-			highlightColor: [255, 255, 255, 100]
+			highlightColor: [255, 255, 255, 100],
+			updateTriggers: {
+				getFillColor: [selectedDate, allStateMetrics]
+			},
 		});
 
 		setLayer(newLayer);
@@ -173,9 +176,9 @@ function StateMap() {
 	const minVal = wvals?.length ? Math.min(...wvals) : 0;
 	const maxVal = wvals?.length ? Math.max(...wvals) : 5;
 
-	const handleDateChange = useCallback((newDate) => {
+	const handleDateChange = (newDate) => {
 		setSelectedDate(newDate);
-	}, []);
+	};
 
 	useEffect(() => {
 		if (playing) {
