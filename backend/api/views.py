@@ -116,6 +116,34 @@ def get_state(request):
     return JsonResponse({"error": "GET request required"}, status=405)
 
 
+def get_all_states(request):
+    if request.method == "GET":
+        try:
+            unique_states = StateTimeseries.objects.values_list(
+                "state_territory", flat=True
+            ).distinct()
+            all_state_data = []
+
+            for state in unique_states:
+                latest_record = (
+                    StateTimeseries.objects.filter(state_territory=state)
+                    .order_by("-ending_date")
+                    .first()
+                )
+                if latest_record:
+                    all_state_data.append(model_to_dict(latest_record))
+
+            if not all_state_data:
+                return JsonResponse({"error": "No state data found"}, status=404)
+
+            return JsonResponse(all_state_data, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "GET request required"}, status=405)
+
+
 def get_regional(request):
     # Each state in a region has the same wval_regional,
     # So we can just return one of the states in that region

@@ -12,6 +12,8 @@
   "dependencies": {
     "@deck.gl/layers": "^9.1.11",
     "@deck.gl/react": "^9.1.11",
+    "d3-color": "^3.1.0",
+    "d3-scale": "^4.0.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-map-gl": "^8.0.4"
