@@ -9,28 +9,28 @@ from django.db import models
 
 
 class CountyCurrent(models.Model):
-    state_territory = models.TextField(db_column='State/Territory', blank=True, null=True)  # Field name made lowercase. Field renamed to remove unsuitable characters.
-    sewershed_id = models.TextField(db_column='Sewershed_ID', blank=True, null=True)  # Field name made lowercase.
-    counties_served = models.TextField(db_column='Counties_Served', blank=True, null=True)  # Field name made lowercase.
-    population_served = models.TextField(db_column='Population_Served', blank=True, null=True)  # Field name made lowercase. This field type is a guess.
-    wval_category = models.TextField(db_column='WVAL_Category', blank=True, null=True)  # Field name made lowercase.
-    reporting_week = models.TextField(db_column='Reporting_Week', blank=True, null=True)  # Field name made lowercase.
+    state_territory = models.TextField(db_column="State/Territory")
+    sewershed_id = models.TextField(db_column="Sewershed_ID", primary_key=True)
+    counties_served = models.TextField(db_column="Counties_Served")
+    population_served = models.FloatField(db_column="Population_Served")
+    wval_category = models.TextField(db_column="WVAL_Category")
+    reporting_week = models.TextField(db_column="Reporting_Week")
 
     class Meta:
         managed = False
-        db_table = 'county_current'
+        db_table = "county_current"
 
 
 class StateTimeseries(models.Model):
-    state_territory = models.TextField(db_column='State/Territory', blank=True, null=True)  # Field name made lowercase. Field renamed to remove unsuitable characters.
-    week_ending_date = models.TextField(db_column='Week_Ending_Date', blank=True, null=True)  # Field name made lowercase.
-    data_collection_period = models.TextField(db_column='Data_Collection_Period', blank=True, null=True)  # Field name made lowercase.
-    state_territory_wval = models.TextField(db_column='State/Territory_WVAL', blank=True, null=True)  # Field name made lowercase. Field renamed to remove unsuitable characters. This field type is a guess.
-    national_wval = models.TextField(db_column='National_WVAL', blank=True, null=True)  # Field name made lowercase. This field type is a guess.
-    regional_wval = models.TextField(db_column='Regional_WVAL', blank=True, null=True)  # Field name made lowercase. This field type is a guess.
-    wval_category = models.TextField(db_column='WVAL_Category', blank=True, null=True)  # Field name made lowercase.
-    coverage = models.TextField(db_column='Coverage', blank=True, null=True)  # Field name made lowercase.
+    state_territory = models.TextField(db_column="State/Territory")
+    week_ending_date = models.TextField(db_column="Week_Ending_Date")
+    data_collection_period = models.TextField(db_column="Data_Collection_Period")
+    state_territory_wval = models.FloatField(db_column="State/Territory_WVAL")
+    national_wval = models.FloatField(db_column="National_WVAL")
+    regional_wval = models.FloatField(db_column="Regional_WVAL")
+    wval_category = models.TextField(db_column="WVAL_Category")
+    coverage = models.TextField(db_column="Coverage")
 
     class Meta:
-        managed = False
-        db_table = 'state_timeseries'
+        db_table = "state_timeseries"
+        unique_together = [["state_territory", "week_ending_date"]]
