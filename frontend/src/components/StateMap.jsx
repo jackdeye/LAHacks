@@ -4,25 +4,27 @@ import { GeoJsonLayer } from "@deck.gl/layers";
 import statesData from "../assets/gz_2010_us_040_00_5m.json";
 import { scaleLinear } from "d3-scale";
 import { rgb } from "d3-color";
+import { transformNonContiguousStates, STATE_BOXES } from "../utilities/transfromNonContiguousStates.js";
 
 function StateMap() {
 	const [stateData, setStateData] = useState(null);
 	const [stateMetrics, setStateMetrics] = useState(null);
 	const [hoveredState, setHoveredState] = useState(null);
+	const [layer, setLayer] = useState(null);
 
-	// Color scale from green (low) to red (high)
 	const colorScale = scaleLinear()
-		.domain([0, 5]) // Adjust based on your data range
-		.range(["#4daf4a", "#e41a1c"]); // Green to red
+		.domain([0, 5])
+		.range(["#4daf4a", "#e41a1c"]);
 
 	useEffect(() => {
 		const loadData = async () => {
 			try {
-				// Load GeoJSON data
+				// Load and transform data
 				const states = statesData.features.filter(feature => feature.properties.NAME);
-				setStateData(states);
+				const transformedStates = transformNonContiguousStates(states);
+				setStateData(transformedStates);
 
-				// Fetch state metrics from API
+				// Fetch metrics
 				const response = await fetch("http://localhost:8000/api/state/all");
 				const metrics = await response.json();
 				setStateMetrics(metrics);
@@ -33,40 +35,61 @@ function StateMap() {
 		loadData();
 	}, []);
 
+	// Create the layer when data is available
+	useEffect(() => {
+		if (!stateData || !stateMetrics) return;
+
+		const newLayer = new GeoJsonLayer({
+			id: "geojson-layer",
+			data: stateData,
+			pickable: true,
+			stroked: true,
+			filled: true,
+			extruded: false,
+			wireframe: false,
+			getFillColor: (feature) => {
+				const baseColor = getStateColor(feature.properties.NAME);
+				const isHovered = hoveredState &&
+					hoveredState.properties.NAME === feature.properties.NAME;
+
+				return isHovered
+					? baseColor.map((c, i) => i < 3 ? Math.min(c + 50, 255) : 220)
+					: baseColor;
+			},
+			getLineColor: [0, 0, 0],
+			getLineWidth: 2,
+			lineWidthMinPixels: 1,
+			onHover: ({ object }) => setHoveredState(object),
+			autoHighlight: true,
+			highlightColor: [255, 255, 255, 100]
+		});
+
+		setLayer(newLayer);
+	}, [stateData, stateMetrics, hoveredState]); // Recreate layer when these change
+
+	// Your boxLayer definition remains the same
+	const boxLayer = new GeoJsonLayer({
+		id: 'state-boxes',
+		data: STATE_BOXES,
+		pickable: false,
+		stroked: true,
+		filled: false,
+		getLineColor: [0, 0, 0],
+		getLineWidth: 1,
+	});
+
 	const getStateColor = (stateName) => {
-		if (!stateMetrics) return [200, 200, 200, 150]; // Default gray
+		if (!stateMetrics) return [200, 200, 200, 150];
 
 		const metric = stateMetrics.find(m => m.state_territory === stateName);
 		if (!metric || metric.state_territory_wval === null) {
-			return [200, 200, 200, 150]; // Gray for missing data
+			return [200, 200, 200, 150];
 		}
 
-		// Convert hex color to RGB array
 		const color = rgb(colorScale(metric.state_territory_wval));
 		return [color.r, color.g, color.b, 200];
 	};
 
-	const layer = stateData && new GeoJsonLayer({
-		id: "geojson-layer",
-		data: stateData,
-		pickable: true,
-		stroked: true,
-		filled: true,
-		extruded: false,
-		wireframe: false,
-		getFillColor: (feature) => {
-			// Highlight the hovered state with brighter color
-			if (hoveredState && feature.properties.NAME === hoveredState.properties.NAME) {
-				const baseColor = getStateColor(feature.properties.NAME);
-				return baseColor.map((c, i) => i < 3 ? Math.min(c + 50, 255) : 220);
-			}
-			return getStateColor(feature.properties.NAME);
-		},
-		getLineColor: [0, 0, 0],
-		getLineWidth: 2,
-		lineWidthMinPixels: 1,
-		onHover: ({ object }) => setHoveredState(object),
-	});
 
 	// Find min/max for legend
 	const wvals = stateMetrics?.map(m => m.state_territory_wval).filter(Number.isFinite);
@@ -82,7 +105,10 @@ function StateMap() {
 					zoom: 3,
 				}}
 				controller={true}
-				layers={layer ? [layer] : []}
+				layers={[boxLayer, ...(layer ? [layer] : [])]} // Box layer first, then states
+				parameters={{
+					clearColor: [255, 255, 255, 1], // Ensure proper transparency
+				}}
 				getTooltip={({ object }) => {
 					if (!object || !stateMetrics) return null;
 
@@ -91,12 +117,12 @@ function StateMap() {
 
 					return {
 						html: `
-              <div style="padding: 8px; background: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1)">
-                <div><b>${object.properties.NAME}</b></div>
-                <div>Value: ${metric.state_territory_wval?.toFixed(2) || 'N/A'}</div>
-                <div>Category: ${metric.wval_category || 'N/A'}</div>
-              </div>
-            `,
+        <div style="padding: 8px; background: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1)">
+          <div><b>${object.properties.NAME}</b></div>
+          <div>Value: ${metric.state_territory_wval?.toFixed(2) || 'N/A'}</div>
+          <div>Category: ${metric.wval_category || 'N/A'}</div>
+        </div>
+      `,
 						style: {
 							backgroundColor: 'transparent',
 							border: 'none',
@@ -105,7 +131,6 @@ function StateMap() {
 				}}
 			/>
 
-			{/* Legend */}
 			{stateMetrics && (
 				<div style={{
 					position: 'absolute',
