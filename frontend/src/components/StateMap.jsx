@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import DeckGL from "@deck.gl/react";
-import { PolygonLayer } from "@deck.gl/layers";
+import { PolygonLayer, GeoJsonLayer } from "@deck.gl/layers";
+// import ReactMapGL from "react-map-gl";
 import statesData from "../assets/gz_2010_us_040_00_5m.json";
 
 function StateMap() {
@@ -17,10 +18,10 @@ function StateMap() {
 		};
 		loadLocalData();
 	}, []);
-	const layer = stateData && new PolygonLayer({
-		id: "state-polygon-layer",
+	const layer = stateData && new GeoJsonLayer({
+		id: "geojson-layer",
 		data: stateData,
-		getPolygon: (feature) => feature.geometry.coordinates,
+		// getPolygon: (feature) => feature.geometry.coordinates,
 		getFillColor: [200, 200, 200, 150], // Example fill color
 		getLineColor: [0, 0, 0],
 		getLineWidth: 2,
@@ -39,7 +40,12 @@ function StateMap() {
 			}}
 			controller={true}
 			layers={layer ? [layer] : []}
-		/>
+		>
+			{/* <ReactMapGL // Or other map component
+        mapStyle="mapbox://styles/mapbox/streets-v12" // Example map style
+        mapboxAccessToken={process.env.MAPBOX_TOKEN} // Your Mapbox token
+      /> */}
+	  </DeckGL>
 	);
 }
 
