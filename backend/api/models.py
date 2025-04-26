@@ -27,5 +27,5 @@ class StateTimeseries(models.Model):
     coverage = models.TextField(db_column="Coverage")
 
     class Meta:
-        managed = false
+        managed = False
         db_table = "state_timeseries"
