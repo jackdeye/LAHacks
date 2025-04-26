@@ -72,13 +72,16 @@ function StateMap() {
 	useEffect(() => {
 		const loadLatestData = async () => {
 			try {
+				// Load and transform data
 				const states = statesData.features.filter(feature => feature.properties.NAME);
 				const transformedStates = transformNonContiguousStates(states);
 				setStateData(transformedStates);
 
+				// Fetch latest metrics (no history)
 				const response = await fetch("http://localhost:8000/api/state/all");
 				const metrics = await response.json();
 				setLatestStateMetrics(metrics);
+				console.log("Fetching the Most recent metrics")
 			} catch (error) {
 				console.error("Error loading initial data:", error);
 			}
@@ -93,6 +96,7 @@ function StateMap() {
 				const response = await fetch("http://localhost:8000/api/state/all?history=true");
 				const metrics = await response.json();
 				setAllStateMetrics(metrics);
+				console.log("Fetching all the metrics")
 			} catch (error) {
 				console.error("Error loading historical data:", error);
 			}
@@ -101,6 +105,7 @@ function StateMap() {
 		loadHistoricalData();
 	}, []);
 
+	// Process data for the slider and set initial date to max
 	useEffect(() => {
 		if (allStateMetrics) {
 			const allDates = new Set();
@@ -145,7 +150,7 @@ function StateMap() {
 		});
 
 		setLayer(newLayer);
-	}, [stateData, latestStateMetrics, hoveredState, selectedDate]); // Added selectedDate
+	}, [stateData, latestStateMetrics, hoveredState, selectedDate]);
 
 	const boxLayer = new GeoJsonLayer({
 		id: 'state-boxes',
@@ -158,17 +163,18 @@ function StateMap() {
 	});
 
 	const getStateColor = (stateName) => {
-		if (!allStateMetrics || !selectedDate) return [200, 200, 200, 150]; // Use allStateMetrics and selectedDate
+		if (!latestStateMetrics) return [200, 200, 200, 150];
 
-		const stateDataForDate = allStateMetrics[stateName]?.find(item => item.ending_date === selectedDate);
-		if (!stateDataForDate || stateDataForDate.state_territory_wval === null) {
+		const metric = latestStateMetrics[stateName];
+		if (!metric || metric.state_territory_wval === null) {
 			return [200, 200, 200, 150];
 		}
-		const color = rgb(colorScale(stateDataForDate.state_territory_wval));
+		const color = rgb(colorScale(metric.state_territory_wval));
 		return [color.r, color.g, color.b, 200];
 	};
 
 
+	// Find min/max for legend (use latestStateMetrics initially, then allStateMetrics)
 	const wvals = latestStateMetrics ? Object.values(latestStateMetrics).map(m => m.state_territory_wval).filter(Number.isFinite) : [];
 	const minVal = wvals?.length ? Math.min(...wvals) : 0;
 	const maxVal = wvals?.length ? Math.max(...wvals) : 5;
@@ -187,7 +193,7 @@ function StateMap() {
 					setSelectedDate(prevDates[nextIndex]);
 					return prevDates;
 				});
-			}, 100);
+			}, 1000); // Adjust for speed
 		} else {
 			clearInterval(intervalRef.current);
 		}
@@ -256,7 +262,6 @@ function StateMap() {
 					position: 'absolute',
 					bottom: '20px',
 					right: '20px',
-
 					backgroundColor: 'white',
 					padding: '10px',
 					borderRadius: '4px',
