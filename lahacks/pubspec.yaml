@@ -31,6 +31,8 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_map: ^6.1.0 # Use latest version
+  flutter_svg: ^1.0.0
+  voronoi_diagram: ^1.0.0
   latlong2: ^0.9.0 # Use latest version
   delaunay: ^2.0.0 # Use latest version
   collection: ^1.17.0 # Often useful for list operations
@@ -61,6 +63,8 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   # assets:
+  assets:
+    - assets/us_map.svg
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
