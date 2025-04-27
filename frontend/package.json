@@ -17,7 +17,8 @@
     "date-fns": "^4.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-map-gl": "^8.0.4"
+    "react-map-gl": "^8.0.4",
+    "turf": "^3.0.14"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
