@@ -4,6 +4,8 @@ import DeckGL from "@deck.gl/react";
 import { GeoJsonLayer } from "@deck.gl/layers";
 import statesData from "../assets/gz_2010_us_040_00_5m.json";
 import countyData from "../assets/gz_2010_us_050_00_5m.json";
+import countyCentroidData from "../assets/counties-centroids.json";
+import { Delaunay } from "d3-delaunay";
 import { scaleLinear } from "d3-scale";
 import { rgb } from "d3-color";
 import {
@@ -21,20 +23,32 @@ const INITIAL_VIEW_STATE = {
   bearing: 0,
 };
 
-function DateSlider({ dates, selectedDate, onPlayToggle, playing, setSelectedDate }) {
+function DateSlider({
+  dates,
+  selectedDate,
+  onPlayToggle,
+  playing,
+  setSelectedDate,
+}) {
   return (
-    <div style={{
-      backgroundColor: 'white',
-      padding: '10px',
-      borderRadius: '4px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      zIndex: 2,
-      width: '80%',
-      maxWidth: '800px',
-      margin: '20px auto'
-    }}>
-      <div style={{ marginBottom: '8px', fontWeight: 'bold', textAlign: 'center' }} className="dark-text">
-        State Values Over Time: {selectedDate ? format(new Date(selectedDate), 'PPP') : 'Select Date'}
+    <div
+      style={{
+        backgroundColor: "white",
+        padding: "10px",
+        borderRadius: "4px",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        zIndex: 2,
+        width: "80%",
+        maxWidth: "800px",
+        margin: "20px auto",
+      }}
+    >
+      <div
+        style={{ marginBottom: "8px", fontWeight: "bold", textAlign: "center" }}
+        className="dark-text"
+      >
+        State Values Over Time:{" "}
+        {selectedDate ? format(new Date(selectedDate), "PPP") : "Select Date"}
       </div>
       <Slider
         min={0}
@@ -45,12 +59,19 @@ function DateSlider({ dates, selectedDate, onPlayToggle, playing, setSelectedDat
         setSelectedDate={setSelectedDate}
         className="w-full"
       />
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
+      <div
+        style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}
+      >
         <button
           onClick={onPlayToggle}
-          style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', borderRadius: '4px' }}
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#4CAF50",
+            color: "white",
+            borderRadius: "4px",
+          }}
         >
-          {playing ? 'Pause' : 'Play'}
+          {playing ? "Pause" : "Play"}
         </button>
       </div>
     </div>
@@ -74,6 +95,19 @@ function StateMap() {
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 
   const colorScale = scaleLinear().domain([0, 5]).range(["#4daf4a", "#e41a1c"]);
+
+  function generateVoronoiPolygons() {
+    const locations = countyCentroidData.features
+      .map((centroid) => {
+        return centroid.geometry.coordinates;
+      })
+      .flat();
+
+    const delaunay = new Delaunay(locations);
+    const voronoi = delaunay.voronoi([-124.849, 18.931, -66.952, 49.384]);
+    console.log("voronoi", voronoi.cellPolygons().next());
+  }
+  const voronoiPolygons = generateVoronoiPolygons(); // this is an iterable
 
   // Fetch initial data (latest metrics only)
   useEffect(() => {
@@ -164,7 +198,13 @@ function StateMap() {
     });
 
     setStateLayer(newStateLayer); // Set the state layer
-  }, [stateData, latestStateMetrics, hoveredState, selectedDate, countyGeoJson]); // Added countyGeoJson
+  }, [
+    stateData,
+    latestStateMetrics,
+    hoveredState,
+    selectedDate,
+    countyGeoJson,
+  ]); // Added countyGeoJson
 
   const boxLayer = new GeoJsonLayer({
     id: "state-boxes",
@@ -190,179 +230,185 @@ function StateMap() {
   };
 
   const getCountyColor = (countyName) => {
-	if (!allCountyMetrics) return [200, 200, 200, 150]; // Use allStateMetrics and selectedDate 
+    if (!allCountyMetrics) return [200, 200, 200, 150]; // Use allStateMetrics and selectedDate
 
+    let entry = allCountyMetrics.find(
+      (item) => item.counties_served == countyName,
+    );
 
-	let entry = allCountyMetrics.find((item) => item.counties_served == countyName);
+    if (!entry) {
+      return [200, 200, 200, 150];
+    }
 
-	if (!entry) {
-		return [200, 200, 200, 150];
-	}
-
-	let wval_cat = 0;
-	switch(entry.wval_category) {
-		case 'Very Low':
-			wval_cat = 1;
-			break;
-		case 'Low':
-			wval_cat = 2;
-			break;
-		case 'Medium':
-			wval_cat = 3;
-			break;
-		case 'High':
-			wval_cat = 4;
-			break;
-		case 'Very High':
-			wval_cat = 5;
-			break;
-	}
-	const color = rgb(colorScale(wval_cat));
-	return [color.r, color.g, color.b, 200];
-  }
+    let wval_cat = 0;
+    switch (entry.wval_category) {
+      case "Very Low":
+        wval_cat = 1;
+        break;
+      case "Low":
+        wval_cat = 2;
+        break;
+      case "Medium":
+        wval_cat = 3;
+        break;
+      case "High":
+        wval_cat = 4;
+        break;
+      case "Very High":
+        wval_cat = 5;
+        break;
+    }
+    const color = rgb(colorScale(wval_cat));
+    return [color.r, color.g, color.b, 200];
+  };
 
   const wvals = latestStateMetrics
     ? Object.values(latestStateMetrics)
-      .map((m) => m.state_territory_wval)
-      .filter(Number.isFinite)
+        .map((m) => m.state_territory_wval)
+        .filter(Number.isFinite)
     : [];
   const minVal = wvals?.length ? Math.min(...wvals) : 0;
   const maxVal = wvals?.length ? Math.max(...wvals) : 5;
 
   // --- MODIFIED onClickGeoJson FUNCTION ---
-  const onClickGeoJson = useCallback((event) => {
-    let minLng = null;
-    let maxLng = null;
-    let minLat = null;
-    let maxLat = null;
+  const onClickGeoJson = useCallback(
+    (event) => {
+      console.log("blah", countyCentroidData);
+      let minLng = null;
+      let maxLng = null;
+      let minLat = null;
+      let maxLat = null;
 
-    const clickedFeature = event.object;
-    const geometry = clickedFeature.geometry;
+      const clickedFeature = event.object;
+      const geometry = clickedFeature.geometry;
 
-    if (!clickedFeature || !clickedFeature.properties) {
-      return;
-    }
+      if (!clickedFeature || !clickedFeature.properties) {
+        return;
+      }
 
-    const stateFips = clickedFeature.properties.STATE;
+      const stateFips = clickedFeature.properties.STATE;
 
-	const loadAllCountyData = async () => {
-		try {
-		  const response = await fetch(
-			"http://localhost:8000/api/county?state=".concat(clickedFeature.properties.NAME),
-		  );
-		  const metrics = await response.json();
-		  console.log(metrics);
-		  setAllCountyMetrics(metrics);
-		} catch (error) {
-		  console.error("Error loading all county data:", error);
-		}
-	  };
-  
-	  loadAllCountyData();
+      const loadAllCountyData = async () => {
+        try {
+          const response = await fetch(
+            "http://localhost:8000/api/county?state=".concat(
+              clickedFeature.properties.NAME,
+            ),
+          );
+          const metrics = await response.json();
+          console.log(metrics);
+          setAllCountyMetrics(metrics);
+        } catch (error) {
+          console.error("Error loading all county data:", error);
+        }
+      };
 
-	  setSelectedDate(dateValues[dateValues.length - 1]);
+      loadAllCountyData();
 
-	const filteredCounties = countyData.features.filter(
-        county => county.properties.STATE === stateFips
-	);
+      setSelectedDate(dateValues[dateValues.length - 1]);
 
-    if (!stateFips) {
-      console.warn("Clicked state missing FIPS");
-      return;
-    }
+      const filteredCounties = countyData.features.filter(
+        (county) => county.properties.STATE === stateFips,
+      );
 
-    setSelectedState(clickedFeature.properties.NAME);
+      if (!stateFips) {
+        console.warn("Clicked state missing FIPS");
+        return;
+      }
 
-    if (filteredCounties.length === 0) {
-      console.warn("No county data");
-      return;
-    }
+      setSelectedState(clickedFeature.properties.NAME);
 
-    const stateCountyGeoJson = {
-      type: 'FeatureCollection',
-      features: filteredCounties
-    };
+      if (filteredCounties.length === 0) {
+        console.warn("No county data");
+        return;
+      }
 
-    setCountyGeoJson(stateCountyGeoJson);
+      const stateCountyGeoJson = {
+        type: "FeatureCollection",
+        features: filteredCounties,
+      };
 
-    // Helper function to update min/max bounds
-    const updateBounds = (coord) => {
-      if (minLng === null || coord[0] < minLng) minLng = coord[0];
-      if (maxLng === null || coord[0] > maxLng) maxLng = coord[0];
-      if (minLat === null || coord[1] < minLat) minLat = coord[1];
-      if (maxLat === null || coord[1] > maxLat) maxLat = coord[1];
-    };
+      setCountyGeoJson(stateCountyGeoJson);
 
-    if (geometry.type === 'Polygon') {
-      // Iterate over rings (exterior and interior)
-      geometry.coordinates.forEach(ring => {
-        // Iterate over coordinates in each ring
-        ring.forEach(coord => {
-          updateBounds(coord);
-        });
-      });
-    } else if (geometry.type === 'MultiPolygon') {
-      // Iterate over individual polygons within the MultiPolygon
-      geometry.coordinates.forEach(polygon => {
-        // Iterate over rings within each polygon
-        polygon.forEach(ring => {
+      // Helper function to update min/max bounds
+      const updateBounds = (coord) => {
+        if (minLng === null || coord[0] < minLng) minLng = coord[0];
+        if (maxLng === null || coord[0] > maxLng) maxLng = coord[0];
+        if (minLat === null || coord[1] < minLat) minLat = coord[1];
+        if (maxLat === null || coord[1] > maxLat) maxLat = coord[1];
+      };
+
+      if (geometry.type === "Polygon") {
+        // Iterate over rings (exterior and interior)
+        geometry.coordinates.forEach((ring) => {
           // Iterate over coordinates in each ring
-          ring.forEach(coord => {
+          ring.forEach((coord) => {
             updateBounds(coord);
           });
         });
-      });
-    } else {
-      // Handle other geometry types if necessary (e.g., Point, LineString)
-      console.warn('Unsupported geometry type:', geometry.type);
-      return; // Exit if geometry type is not handled
-    }
+      } else if (geometry.type === "MultiPolygon") {
+        // Iterate over individual polygons within the MultiPolygon
+        geometry.coordinates.forEach((polygon) => {
+          // Iterate over rings within each polygon
+          polygon.forEach((ring) => {
+            // Iterate over coordinates in each ring
+            ring.forEach((coord) => {
+              updateBounds(coord);
+            });
+          });
+        });
+      } else {
+        // Handle other geometry types if necessary (e.g., Point, LineString)
+        console.warn("Unsupported geometry type:", geometry.type);
+        return; // Exit if geometry type is not handled
+      }
 
-    // Check if any coordinates were processed (in case of empty geometry)
-    if (minLng === null) {
-      console.warn('No valid coordinates found in geometry.');
-      return;
-    }
+      // Check if any coordinates were processed (in case of empty geometry)
+      if (minLng === null) {
+        console.warn("No valid coordinates found in geometry.");
+        return;
+      }
 
+      console.log(minLng, maxLng, minLat, maxLat);
 
-    console.log(minLng, maxLng, minLat, maxLat);
+      const viewport = new WebMercatorViewport();
+      const { longitude, latitude, zoom } = viewport.fitBounds(
+        [
+          [minLng, minLat],
+          [maxLng, maxLat],
+        ],
+        // Optional: Add padding if needed
+        // {
+        //   padding: 20,
+        // },
+      );
 
-    const viewport = new WebMercatorViewport();
-    const { longitude, latitude, zoom } = viewport.fitBounds(
-      [
-        [minLng, minLat],
-        [maxLng, maxLat],
-      ],
-      // Optional: Add padding if needed
-      // {
-      //   padding: 20,
-      // },
-    );
-
-
-
-    console.log(longitude, latitude, zoom);
-    // Adjust zoom level as needed; your current adjustment seems arbitrary,
-    // you might want to reconsider the zoom: 6 + zoom / 3 part
-    setViewState({ longitude, latitude, zoom: 6 + zoom / 3 });
-
-  }, [setViewState, countyData, countyGeoJson, setSelectedState]); // Added dependencies
+      console.log(longitude, latitude, zoom);
+      // Adjust zoom level as needed; your current adjustment seems arbitrary,
+      // you might want to reconsider the zoom: 6 + zoom / 3 part
+      setViewState({ longitude, latitude, zoom: 6 + zoom / 3 });
+    },
+    [setViewState, countyData, countyGeoJson, setSelectedState],
+  ); // Added dependencies
 
   const handleDateChange = (newDate) => {
     setSelectedDate(newDate);
   };
-  const handleViewStateChange = useCallback(({ viewState: newViewState, interactionState }) => {
-    if (interactionState.isZooming) {
-      console.log("Scrolling detected!");
-      setViewState(INITIAL_VIEW_STATE); // Keep the reset logic
-	  setCountyGeoJson(null);
-	  setCountyLayer(null);
-	  setSelectedState(null);
-		setAllCountyMetrics(null);
-    } else {
-      setViewState(newViewState);
-    }
-  }, []);
+  const handleViewStateChange = useCallback(
+    ({ viewState: newViewState, interactionState }) => {
+      if (interactionState.isZooming) {
+        console.log("Scrolling detected!");
+        setViewState(INITIAL_VIEW_STATE); // Keep the reset logic
+        setCountyGeoJson(null);
+        setCountyLayer(null);
+        setSelectedState(null);
+        setAllCountyMetrics(null);
+      } else {
+        setViewState(newViewState);
+      }
+    },
+    [],
+  );
   useEffect(() => {
     if (playing) {
       intervalRef.current = setInterval(() => {
@@ -385,8 +431,10 @@ function StateMap() {
   };
 
   useEffect(() => {
-	// New layer for counties
-    const countyLayer = countyGeoJson && new GeoJsonLayer({
+    // New layer for counties
+    const countyLayer =
+      countyGeoJson &&
+      new GeoJsonLayer({
         id: "county-layer",
         data: countyGeoJson,
         pickable: true, // Make counties pickable
@@ -395,27 +443,27 @@ function StateMap() {
         extruded: false,
         wireframe: false,
         getFillColor: (feature) => {
-			//console.log(feature);
-			const baseColor = getCountyColor(feature.properties.NAME);
-			const isHovered =
-			  hoveredState &&
-			  hoveredState.properties.NAME === feature.properties.NAME;
-	
-			return isHovered
-			  ? baseColor.map((c, i) => (i < 3 ? Math.min(c + 50, 255) : 220))
-			  : baseColor;
-		  },
+          //console.log(feature);
+          const baseColor = getCountyColor(feature.properties.NAME);
+          const isHovered =
+            hoveredState &&
+            hoveredState.properties.NAME === feature.properties.NAME;
+
+          return isHovered
+            ? baseColor.map((c, i) => (i < 3 ? Math.min(c + 50, 255) : 220))
+            : baseColor;
+        },
         getLineColor: [50, 50, 50, 255], // Darker line color
         getLineWidth: 1,
         lineWidthMinPixels: 0.5,
-		onHover: ({ object }) => setHoveredState(object),
+        onHover: ({ object }) => setHoveredState(object),
         // Add getFillColor based on county metrics if you have them
-		updateTriggers: {
-			getFillColor: [allCountyMetrics, countyGeoJson], // Added countyGeoJson as trigger
-		  },
-    });
+        updateTriggers: {
+          getFillColor: [allCountyMetrics, countyGeoJson], // Added countyGeoJson as trigger
+        },
+      });
 
-	setCountyLayer(countyLayer);
+    setCountyLayer(countyLayer);
   }, [allCountyMetrics, countyGeoJson, hoveredState]);
 
   if (!stateData || !latestStateMetrics) {
@@ -424,9 +472,15 @@ function StateMap() {
 
   return (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div className="map-container" style={{ 'position': 'relative' }}>
-          <div style={{ position: 'relative', height: '100%' }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        <div className="map-container" style={{ position: "relative" }}>
+          <div style={{ position: "relative", height: "100%" }}>
             <DeckGL
               style={{ width: "100%", height: "100% " }}
               viewState={viewState}
@@ -435,7 +489,7 @@ function StateMap() {
               layers={[
                 boxLayer,
                 ...(stateLayer ? [stateLayer] : []), // State layer
-                ...(countyLayer ? [countyLayer] : []) // County layer, renders on top when countyGeoJson is not null
+                ...(countyLayer ? [countyLayer] : []), // County layer, renders on top when countyGeoJson is not null
               ]}
               parameters={{
                 clearColor: [255, 255, 255, 1],
@@ -443,21 +497,31 @@ function StateMap() {
               onClick={onClickGeoJson} // This now handles both state and potentially county clicks
               getTooltip={({ object, layer }) => {
                 // Modify tooltip to show state info OR county info based on the layer
-                if (layer && layer.id === 'county-layer' && object && object.properties) {
+                if (
+                  layer &&
+                  layer.id === "county-layer" &&
+                  object &&
+                  object.properties
+                ) {
                   return {
                     html: `
                      <div style="padding: 8px; background: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1)">
                        <div><b>${object.properties.NAME} County</b></div> {/* Assuming county NAME */}
                        <div>State FIPS: ${object.properties.STATEFP}</div> {/* Assuming county STATEFP */}
                        <div>County FIPS: ${object.properties.COUNTYFP}</div> {/* Assuming county COUNTYFP */}
-                       ${/* Add county specific data if available */''}
+                       ${/* Add county specific data if available */ ""}
                      </div>
                    `,
                     style: { backgroundColor: "transparent", border: "none" },
                   };
                 }
                 // Fallback to state tooltip if clicked object is from state layer and county data is not active OR if county data is active but clicked outside counties
-                if (layer && layer.id === 'state-layer' && object && object.properties) {
+                if (
+                  layer &&
+                  layer.id === "state-layer" &&
+                  object &&
+                  object.properties
+                ) {
                   // Only show the detailed state tooltip when viewing states (countyGeoJson is null)
                   // When county data is loaded, the state layer is dimmed, the tooltip might be less relevant or show different info.
                   // For now, let's only show the detailed state tooltip when not in county view.
@@ -491,7 +555,6 @@ function StateMap() {
                 //      return { html: `<div>State Box</div>`, style: { backgroundColor: 'white' }};
                 // }
 
-
                 return null; // No tooltip for other cases
               }}
             />
@@ -499,7 +562,7 @@ function StateMap() {
           {latestStateMetrics && (
             <div
               style={{
-                position: 'absolute',
+                position: "absolute",
                 top: "20px",
                 right: "20px",
                 backgroundColor: "white",
@@ -512,10 +575,16 @@ function StateMap() {
               }}
               className="dark-text"
             >
-              <div style={{ marginBottom: "8px", fontWeight: "bold" }} className="dark-text">
+              <div
+                style={{ marginBottom: "8px", fontWeight: "bold" }}
+                className="dark-text"
+              >
                 State Values
               </div>
-              <div style={{ display: "flex", marginBottom: "8px" }} className="dark-text">
+              <div
+                style={{ display: "flex", marginBottom: "8px" }}
+                className="dark-text"
+              >
                 {[0, 1, 2, 3, 4, 5].map((val) => (
                   <div
                     key={val}
@@ -528,7 +597,10 @@ function StateMap() {
                   />
                 ))}
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }} className="dark-text">
+              <div
+                style={{ display: "flex", justifyContent: "space-between" }}
+                className="dark-text"
+              >
                 <span>{minVal.toFixed(1)}</span>
                 <span>{maxVal.toFixed(1)}</span>
               </div>
@@ -550,19 +622,18 @@ function StateMap() {
               });
             }}
             style={{
-              marginTop: '20px',
-              padding: '8px 16px',
-              backgroundColor: '#007bff', // Example blue color
-              color: 'white',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              border: 'none',
+              marginTop: "20px",
+              padding: "8px 16px",
+              backgroundColor: "#007bff", // Example blue color
+              color: "white",
+              borderRadius: "4px",
+              cursor: "pointer",
+              border: "none",
             }}
           >
             Back to US Map
           </button>
         )}
-
 
         {allStateMetrics && (
           <DateSlider
