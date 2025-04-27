@@ -586,7 +586,7 @@ function StateMap() {
                 style={{ marginBottom: "8px", fontWeight: "bold" }}
                 className="dark-text"
               >
-                State Values
+                Wastewater Risk Levels
               </div>
               <div
                 style={{ display: "flex", marginBottom: "8px" }}
@@ -608,8 +608,8 @@ function StateMap() {
                 style={{ display: "flex", justifyContent: "space-between" }}
                 className="dark-text"
               >
-                <span>{minVal.toFixed(1)}</span>
-                <span>{maxVal.toFixed(1)}</span>
+                <span>0.5</span>
+                <span>10</span>
               </div>
             </div>
           )}
