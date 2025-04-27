@@ -53,8 +53,10 @@ function StateMap() {
   const [stateData, setStateData] = useState(null);
   const [latestStateMetrics, setLatestStateMetrics] = useState(null);
   const [allStateMetrics, setAllStateMetrics] = useState(null);
+  const [allCountyMetrics, setAllCountyMetrics] = useState(null);
   const [hoveredState, setHoveredState] = useState(null);
   const [stateLayer, setStateLayer] = useState(null); // Renamed layer to stateLayer for clarity
+  const [countyLayer, setCountyLayer] = useState(null);
   const [countyGeoJson, setCountyGeoJson] = useState(null); // New state for county data
   const [dateValues, setDateValues] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -71,7 +73,7 @@ function StateMap() {
 
   // Fetch initial data (latest metrics only)
   useEffect(() => {
-    const loadLatestData = async () => {
+    const loadLatestStateData = async () => {
       try {
         const states = statesData.features.filter(
           (feature) => feature.properties.NAME,
@@ -86,7 +88,7 @@ function StateMap() {
         console.error("Error loading initial data:", error);
       }
     };
-    loadLatestData();
+    loadLatestStateData();
   }, []);
 
   // Fetch historical data (runs after initial render)
@@ -135,7 +137,7 @@ function StateMap() {
       getFillColor: (feature) => {
         // Only color states if county data is not loaded
         if (countyGeoJson) {
-            return [200, 200, 200, 50]; // Dim states when county data is visible
+            return [200, 200, 200, 150]; // Dim states when county data is visible
         }
         const baseColor = getStateColor(feature.properties.NAME);
         const isHovered =
@@ -183,6 +185,38 @@ function StateMap() {
     return [color.r, color.g, color.b, 200];
   };
 
+  const getCountyColor = (countyName) => {
+	if (!allCountyMetrics) return [200, 200, 200, 150]; // Use allStateMetrics and selectedDate 
+
+
+	let entry = allCountyMetrics.find((item) => item.counties_served == countyName);
+
+	if (!entry) {
+		return [200, 200, 200, 150];
+	}
+
+	let wval_cat = 0;
+	switch(entry.wval_category) {
+		case 'Very Low':
+			wval_cat = 1;
+			break;
+		case 'Low':
+			wval_cat = 2;
+			break;
+		case 'Medium':
+			wval_cat = 3;
+			break;
+		case 'High':
+			wval_cat = 4;
+			break;
+		case 'Very High':
+			wval_cat = 5;
+			break;
+	}
+	const color = rgb(colorScale(wval_cat));
+	return [color.r, color.g, color.b, 200];
+  }
+
   const wvals = latestStateMetrics
     ? Object.values(latestStateMetrics)
         .map((m) => m.state_territory_wval)
@@ -213,6 +247,21 @@ function StateMap() {
 	}
 
 	setSelectedState(clickedFeature.properties.NAME);
+
+	const loadAllCountyData = async () => {
+		try {
+		  const response = await fetch(
+			"http://localhost:8000/api/county?state=".concat(clickedFeature.properties.NAME),
+		  );
+		  const metrics = await response.json();
+		  console.log(metrics);
+		  setAllCountyMetrics(metrics);
+		} catch (error) {
+		  console.error("Error loading all county data:", error);
+		}
+	  };
+  
+	  loadAllCountyData();
 
 	const filteredCounties = countyData.features.filter(
         county => county.properties.STATE === stateFips
@@ -316,7 +365,8 @@ function StateMap() {
     setPlaying((prev) => !prev);
   };
 
-    // New layer for counties
+  useEffect(() => {
+	// New layer for counties
     const countyLayer = countyGeoJson && new GeoJsonLayer({
         id: "county-layer",
         data: countyGeoJson,
@@ -325,23 +375,29 @@ function StateMap() {
         filled: true,
         extruded: false,
         wireframe: false,
-        getFillColor: [100, 149, 237, 150], // A default color for counties (e.g., Cornflower Blue)
+        getFillColor: (feature) => {
+			//console.log(feature);
+			const baseColor = getCountyColor(feature.properties.NAME);
+			const isHovered =
+			  hoveredState &&
+			  hoveredState.properties.NAME === feature.properties.NAME;
+	
+			return isHovered
+			  ? baseColor.map((c, i) => (i < 3 ? Math.min(c + 50, 255) : 220))
+			  : baseColor;
+		  },
         getLineColor: [50, 50, 50, 255], // Darker line color
         getLineWidth: 1,
         lineWidthMinPixels: 0.5,
-         // You can add onHover and onClick handlers specifically for counties here
-        onHover: ({object, layer}) => {
-            // Implement county hover effect if needed
-            // console.log('Hovered county:', object?.properties?.NAME);
-        },
-        onClick: ({object, layer}) => {
-             // This onClick will be handled by the main onClickGeoJson due to layer picking order
-             // But you could put county-specific click logic here if you prefer
-        },
+		onHover: ({ object }) => setHoveredState(object),
         // Add getFillColor based on county metrics if you have them
-        // updateTriggers: { getFillColor: [ /* add county data updates if needed */ ] },
+		updateTriggers: {
+			getFillColor: [allCountyMetrics, countyGeoJson], // Added countyGeoJson as trigger
+		  },
     });
 
+	setCountyLayer(countyLayer);
+  }, [allCountyMetrics, countyGeoJson, hoveredState]);
 
   if (!stateData || !latestStateMetrics) {
     return <div>Loading...</div>;

@@ -2,6 +2,8 @@ from django.db.models import Avg
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 
+from collections import defaultdict
+
 from .models import CountyCurrent, StateTimeseries
 
 WVAL_CATEGORY_MAPPING = {
@@ -42,36 +44,72 @@ def get_county(request):
                 status=400,
             )
 
-        if not state or not county:
+        if not state:
             return JsonResponse(
-                {"error": "Missing 'state' or 'county' parameter"}, status=400
+                {"error": "Missing 'state' parameter"}, status=400
             )
 
         try:
-            records = CountyCurrent.objects.filter(
-                state_territory__icontains=state, counties_served__icontains=county
-            )
+            records = ''
+            if not county:
+                records = CountyCurrent.objects.filter(
+                    state_territory__icontains=state
+                )
+            else:
+                records = CountyCurrent.objects.filter(
+                    state_territory__icontains=state, counties_served__icontains=county
+                )
 
             if not records:
                 return JsonResponse({"error": "No matching counties found"}, status=404)
 
-            wval_categories = [record.wval_category for record in records]
-            averaged_category = average_wval_category(wval_categories)
+            if not county:
+                entries = list(records.values())
 
-            first_record = records.first()
+                county_groups_categories = defaultdict(list)
 
-            if averaged_category:
-                result = {
-                    "state_territory": first_record.state_territory,
-                    "counties_served": first_record.counties_served,
-                    "wval_category": averaged_category,
-                    "reporting_week": "Averaged across available weeks",
-                }
-                return JsonResponse(result)
+                for entry in entries:
+                    counties_served = entry.get("counties_served")
+                    wval_cat = entry.get("wval_category")
+
+                    if counties_served and wval_cat is not None:
+                        county_names = [name.strip() for name in counties_served.split(',') if name.strip()]
+                        for county_name in county_names:
+                            if county_name:
+                                county_groups_categories[county_name].append(wval_cat)
+                            else:
+                                print("Empty county name?")
+
+                response = []
+                for county_name, wval_list in county_groups_categories.items():
+                    if wval_list:
+                        averaged_category = average_wval_category(wval_list)
+                        response.append({
+                            "state_territory": records.first().state_territory,
+                            "counties_served": county_name,
+                            "wval_category": averaged_category,
+                            "reporting week": records.first().reporting_week
+                            })
+                        
+                return JsonResponse(response, safe=False)
             else:
-                return JsonResponse(
-                    {"error": "Could not average wval_category"}, status=500
-                )
+                wval_categories = [record.wval_category for record in records]
+                averaged_category = average_wval_category(wval_categories)
+
+                first_record = records.first()
+
+                if averaged_category:
+                    result = {
+                        "state_territory": first_record.state_territory,
+                        "counties_served": first_record.counties_served,
+                        "wval_category": averaged_category,
+                        "reporting_week": first_record.reporting_week,
+                    }
+                    return JsonResponse(result)
+                else:
+                    return JsonResponse(
+                        {"error": "Could not average wval_category"}, status=500
+                    )
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
