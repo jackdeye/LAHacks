@@ -957,14 +957,11 @@ function StateMap() {
                   gap: "8px",
                 }}
               >
-                {/* AI Icon */}
-                <HiSparkles /> Predict Next 4 Weeks?
+              AI Model Prediction
               </div>
 
               {/* Four buttons */}
 
-
-              // Then modify your buttons to use this function:
               <Predictions
                 buttonStyle={buttonStyle}
                 onWeekSelect={handleWeekSelect}
