@@ -10,4 +10,5 @@ urlpatterns = [
     path("county", views.get_county),
     path("predictions", views.get_predictions, name="get_predictions"),
     path("force_email", views.force_email),
+    path("predictions", views.get_predictions, name="get_predictions"),
 ]
