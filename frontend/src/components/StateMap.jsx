@@ -5,7 +5,9 @@ import { TileLayer } from "@deck.gl/geo-layers";
 import { GeoJsonLayer, BitmapLayer } from "@deck.gl/layers";
 import statesData from "../assets/gz_2010_us_040_00_5m.json";
 import countyData from "../assets/gz_2010_us_050_00_5m.json";
-import { scaleLinear } from "d3-scale";
+import { scaleLinear, scaleSequential } from "d3-scale";
+import { interpolateYlOrRd } from "d3-scale-chromatic";
+
 import { rgb } from "d3-color";
 import {
   transformNonContiguousStates,
@@ -93,7 +95,7 @@ function StateMap() {
   const [selectedState, setSelectedState] = useState(null); // You might use this to track the active state for county view
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 
-  const colorScale = scaleLinear().domain([0, 5]).range(["#4daf4a", "#e41a1c"]);
+  const colorScale = scaleSequential(interpolateYlOrRd).domain([0.5, 10]); // 1 = Very Low, 5 = Very High
 
   // Fetch initial data (latest metrics only)
   useEffect(() => {
@@ -248,19 +250,19 @@ function StateMap() {
     let wval_cat = 0;
     switch (entry.wval_category) {
       case "Very Low":
-        wval_cat = 1;
+        wval_cat = 0.1;
         break;
       case "Low":
-        wval_cat = 2;
+        wval_cat = 1.5;
         break;
-      case "Medium":
+      case "Moderate":
         wval_cat = 3;
         break;
       case "High":
-        wval_cat = 4;
+        wval_cat = 4.5;
         break;
       case "Very High":
-        wval_cat = 5;
+        wval_cat = 8;
         break;
     }
     const color = rgb(colorScale(wval_cat));
@@ -273,7 +275,7 @@ function StateMap() {
         .filter(Number.isFinite)
     : [];
   const minVal = wvals?.length ? Math.min(...wvals) : 0;
-  const maxVal = wvals?.length ? Math.max(...wvals) : 5;
+  const maxVal = wvals?.length ? Math.max(...wvals) : 10;
 
   // --- MODIFIED onClickGeoJson FUNCTION ---
   const onClickGeoJson = useCallback(
@@ -590,7 +592,7 @@ function StateMap() {
                 style={{ display: "flex", marginBottom: "8px" }}
                 className="dark-text"
               >
-                {[0, 1, 2, 3, 4, 5].map((val) => (
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((val) => (
                   <div
                     key={val}
                     style={{
