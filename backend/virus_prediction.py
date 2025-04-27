@@ -1,9 +1,11 @@
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Force CPU mode if GPU issues persist
+import tensorflow as tf
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+print(tf.test.gpu_device_name())  # Should show your GPU
 
+# Rest of your imports...
 import sqlite3
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -15,6 +17,18 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout, Input
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.saving import save_model
+
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+print(tf.test.gpu_device_name())
+
+# Configure GPU memory growth to avoid allocation errors
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
 
 # Data loading
 conn = sqlite3.connect("db/db.sqlite")
