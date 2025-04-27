@@ -260,10 +260,12 @@ function StateMap() {
   
 	  loadAllCountyData();
 
+	  setSelectedDate(dateValues[dateValues.length - 1]);
+
 	const filteredCounties = countyData.features.filter(
         county => county.properties.STATE === stateFips
 	);
-	
+
     if (!stateFips) {
       console.warn("Clicked state missing FIPS");
       return;
@@ -353,6 +355,10 @@ function StateMap() {
     if (interactionState.isZooming) {
       console.log("Scrolling detected!");
       setViewState(INITIAL_VIEW_STATE); // Keep the reset logic
+	  setCountyGeoJson(null);
+	  setCountyLayer(null);
+	  setSelectedState(null);
+		setAllCountyMetrics(null);
     } else {
       setViewState(newViewState);
     }
