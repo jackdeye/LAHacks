@@ -1,7 +1,9 @@
 from django.db.models import Avg
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from .tasks import *
+import json
 from collections import defaultdict
 
 from .models import CountyCurrent, StateTimeseries
@@ -282,6 +284,33 @@ def get_national(request):
             return JsonResponse(model_to_dict(record), safe=False)
 
     return JsonResponse({"error": "GET request required"}, status=405)
+
+@csrf_exempt
+def notify_me(request):
+    print(request)
+    if request.method == "POST":
+        params = json.loads(request.body)
+        print(f"{params}")
+        email = params['email']
+        location = params['location']
+
+        print(f"email: {email}, loc: {location}")
+
+        if not email or not location:
+            return JsonResponse({'message': 'Email and location are required.'}, status=400)
+
+        # Check if the email is already in the database
+        if EmailList.objects.filter(email=email).exists():
+            return JsonResponse({'message': 'This email is already subscribed.'}, status=400)
+
+        # Save the data to the database
+        email_entry = EmailList(email=email, location=location)
+        email_entry.save()
+
+        return JsonResponse({'message': 'You will now be informed!'}, status=200)
+
+    else:
+        return JsonResponse({"error": "POST request required"}, status=405)
 
 def force_email(request):
     if request.method == "GET":
