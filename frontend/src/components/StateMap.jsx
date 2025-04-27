@@ -12,67 +12,40 @@ import {
 import Slider from "./Slider.jsx";
 import { format } from "date-fns";
 
-function DateSlider({
-  dates,
-  selectedDate,
-  onDateChange,
-  onPlayToggle,
-  playing,
-}) {
-  const handleSliderChange = useCallback(
-    (value) => {
-      onDateChange(dates[value[0]]);
-    },
-    [dates, onDateChange],
-  );
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        bottom: "80px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        backgroundColor: "white",
-        padding: "10px",
-        borderRadius: "4px",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        zIndex: 2,
-        width: "80%",
-        maxWidth: "800px",
-      }}
-    >
-      <div
-        style={{ marginBottom: "8px", fontWeight: "bold", textAlign: "center" }}
-      >
-        State Values Over Time:{" "}
-        {selectedDate ? format(new Date(selectedDate), "PPP") : "Select Date"}
-      </div>
-      <Slider
-        min={0}
-        max={dates.length - 1}
-        step={1}
-        value={[dates.indexOf(selectedDate)]}
-        onValueChange={handleSliderChange}
-        className="w-full"
-      />
-      <div
-        style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}
-      >
-        <button
-          onClick={onPlayToggle}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "#4CAF50",
-            color: "white",
-            borderRadius: "4px",
-          }}
-        >
-          {playing ? "Pause" : "Play"}
-        </button>
-      </div>
-    </div>
-  );
+function DateSlider({ dates, selectedDate, onPlayToggle, playing, setSelectedDate }) {
+	return (
+		<div style={{
+			backgroundColor: 'white',
+			padding: '10px',
+			borderRadius: '4px',
+			boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+			zIndex: 2,
+			width: '80%',
+			maxWidth: '800px',
+			margin: '20px auto'
+		}}>
+			<div style={{ marginBottom: '8px', fontWeight: 'bold', textAlign: 'center' }}  className="dark-text">
+				State Values Over Time: {selectedDate ? format(new Date(selectedDate), 'PPP') : 'Select Date'}
+			</div>
+			<Slider
+				min={0}
+				max={dates.length - 1}
+				step={1}
+				value={[dates.indexOf(selectedDate)]}
+				dates={dates}
+				setSelectedDate={setSelectedDate}
+				className="w-full"
+			/>
+			<div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
+				<button
+					onClick={onPlayToggle}
+					style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: 'white', borderRadius: '4px' }}
+				>
+					{playing ? 'Pause' : 'Play'}
+				</button>
+			</div>
+		</div>
+	);
 }
 
 function StateMap() {
@@ -271,8 +244,12 @@ function StateMap() {
   }
 
   return (
-    <div style={{ position: "relative", height: "100vh" }}>
+	<>
+	<div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+	<div className="map-container" style={{'position': 'relative'}}>
+	<div style={{ position: 'relative', height: '100%' }}>
       <DeckGL
+	  	style={{ width: "100%", height: "100% "}}
         viewState={viewState}
         controller={true}
         layers={[boxLayer, ...(layer ? [layer] : [])]}
@@ -304,36 +281,28 @@ function StateMap() {
             },
           };
         }}
-      />
-
-      {allStateMetrics && (
-        <DateSlider
-          dates={dateValues}
-          selectedDate={selectedDate}
-          onDateChange={handleDateChange}
-          onPlayToggle={togglePlay}
-          playing={playing}
-        />
-      )}
-
-      {latestStateMetrics && (
+		/>
+	</div>
+	{latestStateMetrics && (
         <div
           style={{
-            position: "absolute",
-            bottom: "20px",
-            right: "20px",
-
+			position: 'absolute',
+			top: "20px",
+			right: "20px",
             backgroundColor: "white",
             padding: "10px",
             borderRadius: "4px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            zIndex: 1,
+            zIndex: 10,
+			// marginTop: '20px',
+			// alignSelf: 'flex-end'
           }}
+		   className="dark-text"
         >
-          <div style={{ marginBottom: "8px", fontWeight: "bold" }}>
+          <div style={{ marginBottom: "8px", fontWeight: "bold" }} className="dark-text">
             State Values
           </div>
-          <div style={{ display: "flex", marginBottom: "8px" }}>
+          <div style={{ display: "flex", marginBottom: "8px" }} className="dark-text">
             {[0, 1, 2, 3, 4, 5].map((val) => (
               <div
                 key={val}
@@ -346,13 +315,28 @@ function StateMap() {
               />
             ))}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }} className="dark-text">
             <span>{minVal.toFixed(1)}</span>
             <span>{maxVal.toFixed(1)}</span>
           </div>
         </div>
       )}
+	</div>
+
+		{/* <div style={{display: 'flex'}}> */}
+      {allStateMetrics && (
+        <DateSlider
+			dates={dateValues}
+			selectedDate={selectedDate}
+			onDateChange={handleDateChange}
+			onPlayToggle={togglePlay}
+			playing={playing}
+			setSelectedDate={setSelectedDate}
+		/>
+      )}
+	  {/* </div> */}
     </div>
+	</>
   );
 }
 

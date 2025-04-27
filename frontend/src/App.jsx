@@ -7,9 +7,7 @@ function App() {
   return (
     <div style={{ textAlign: 'center' }}>
       <Banner />
-      <div className="map-container">
-        <StateMap />
-      </div>
+      <StateMap />
     </div>
   );
 }
