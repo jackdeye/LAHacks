@@ -8,7 +8,7 @@ function Banner() {
     <div
       className="banner"
       style={{
-        backgroundColor: "#4CAF50",
+        backgroundColor: "#4a90e2",
         height: "7vh",
         color: "white",
         display: "flex",

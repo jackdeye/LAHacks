@@ -11,6 +11,7 @@ import { Delaunay } from "d3-delaunay";
 import { scaleLinear, scaleSequential } from "d3-scale";
 import { interpolateYlOrRd } from "d3-scale-chromatic";
 import { FaPlay, FaPause } from "react-icons/fa";
+import { HiSparkles } from "react-icons/hi2";
 
 import { rgb } from "d3-color";
 import {
@@ -34,6 +35,18 @@ const MIN_LATITUDE = -85.0511;
 const MAX_LATITUDE = 85.0511;
 const MIN_LONGITUDE = -10;
 const MAX_LONGITUDE = 10;
+
+const buttonStyle = {
+  padding: "10px",
+  backgroundColor: "#4a90e2",
+  color: "white",
+  border: "none",
+  borderRadius: "4px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  outline: "none",
+  transition: "opacity 0.3s ease",
+};
 
 function DateSlider({
   dates,
@@ -330,7 +343,7 @@ function StateMap() {
           ? baseColor.map((c, i) => (i < 3 ? Math.min(c + 50, 255) : 220))
           : baseColor;
       },
-      getLineColor: [0, 0, 0],
+      getLineColor: [220, 220, 220],
       getLineWidth: 2,
       lineWidthMinPixels: 1,
       onHover: ({ object }) => setHoveredState(object),
@@ -867,6 +880,74 @@ function StateMap() {
               >
                 <span>0.5</span>
                 <span>10</span>
+              </div>
+            </div>
+          )}
+          {showSlider && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: "20px",
+                left: "20px", // 🌟 Opposite side of the legend
+                backgroundColor: "white",
+                padding: "15px",
+                borderRadius: "8px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                zIndex: 10,
+                width: "250px",
+              }}
+              className="dark-text"
+            >
+              <div
+                style={{
+                  marginBottom: "10px",
+                  fontWeight: "bold",
+                  fontSize: "18px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                {/* AI Icon */}
+                <HiSparkles /> Predict Next 4 Weeks?
+              </div>
+
+              {/* Four buttons */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
+                <button
+                  style={buttonStyle}
+                  onMouseEnter={(e) => (e.target.style.opacity = "0.8")} // 🌟 slight transparent
+                  onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                >
+                  Week 1
+                </button>
+                <button
+                  style={buttonStyle}
+                  onMouseEnter={(e) => (e.target.style.opacity = "0.8")} // 🌟 slight transparent
+                  onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                >
+                  Week 2
+                </button>
+                <button
+                  style={buttonStyle}
+                  onMouseEnter={(e) => (e.target.style.opacity = "0.8")} // 🌟 slight transparent
+                  onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                >
+                  Week 3
+                </button>
+                <button
+                  style={buttonStyle}
+                  onMouseEnter={(e) => (e.target.style.opacity = "0.8")} // 🌟 slight transparent
+                  onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                >
+                  Week 4
+                </button>
               </div>
             </div>
           )}
