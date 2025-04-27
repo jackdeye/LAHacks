@@ -50,3 +50,12 @@ class FuturePrediction(models.Model):
             "week_3_prediction": self.week_3_prediction,
             "week_4_prediction": self.week_4_prediction,
         }
+
+
+class EmailList(models.Model):
+    email = models.TextField(db_column="Email", primary_key=True)
+    location = models.TextField(db_column="Location")
+
+    class Meta:
+        managed = True
+        db_table = "email_list"
