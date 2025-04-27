@@ -1,8 +1,9 @@
 import React from "react";
 import "./Slider.css";
 
-function Slider({ min, max, step, value, dates, setSelectedDate }) {
+function Slider({ min, max, step, value, dates, setSelectedDate, setPredictionData }) {
   const handleChange = (e) => {
+    setPredictionData(null);
     setSelectedDate(dates[Number(e.target.value)]);
   };
 

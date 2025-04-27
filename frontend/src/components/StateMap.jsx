@@ -55,7 +55,8 @@ function DateSlider({
   selectedDate,
   onPlayToggle,
   playing,
-  setSelectedDate
+  setSelectedDate,
+  setPredictionData
 }) {
   return (
     <div
@@ -103,6 +104,7 @@ function DateSlider({
           dates={dates}
           setSelectedDate={setSelectedDate}
           className="w-full"
+          setPredictionData={setPredictionData}
         />
       </div>
     </div>
@@ -631,7 +633,7 @@ function StateMap() {
         setViewState(newViewState);
       }
     },
-    [predictionData],
+    [],
   );
   useEffect(() => {
     if (playing) {
@@ -879,6 +881,7 @@ function StateMap() {
                 onPlayToggle={togglePlay}
                 playing={playing}
                 setSelectedDate={setSelectedDate}
+                setPredictionData={setPredictionData}
               />
             </div>
           )}
