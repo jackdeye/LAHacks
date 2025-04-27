@@ -29,3 +29,14 @@ class StateTimeseries(models.Model):
     class Meta:
         managed = False
         db_table = "state_timeseries"
+
+class FuturePrediction(models.Model):
+    state = models.TextField(db_column="state", primary_key=True)
+    week_1_prediction = models.FloatField(db_column="Week_1_Predictions")
+    week_2_prediction = models.FloatField()
+    week_3_prediction = models.FloatField()
+    week_4_prediction = models.FloatField()
+
+    class Meta:
+        managed = False
+        db_table = 'future_predictions'

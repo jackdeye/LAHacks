@@ -1,7 +1,7 @@
 from django.db.models import Avg
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
-
+from .models import FuturePrediction
 from collections import defaultdict
 
 from .models import CountyCurrent, StateTimeseries
@@ -282,3 +282,8 @@ def get_national(request):
             return JsonResponse(model_to_dict(record), safe=False)
 
     return JsonResponse({"error": "GET request required"}, status=405)
+
+def get_predictions(request):
+    predictions = FuturePrediction.objects.all()
+    predictions_list = [prediction.to_dict() for prediction in predictions]
+    return JsonResponse({'predictions': predictions_list})
