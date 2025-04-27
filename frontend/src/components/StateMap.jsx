@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { WebMercatorViewport } from "@deck.gl/core";
+import { WebMercatorViewport, FlyToInterpolator } from "@deck.gl/core";
 import DeckGL from "@deck.gl/react";
 import { TileLayer } from "@deck.gl/geo-layers";
 import { GeoJsonLayer, BitmapLayer } from "@deck.gl/layers";
@@ -7,6 +7,7 @@ import statesData from "../assets/gz_2010_us_040_00_5m.json";
 import countyData from "../assets/gz_2010_us_050_00_5m.json";
 import { scaleLinear, scaleSequential } from "d3-scale";
 import { interpolateYlOrRd } from "d3-scale-chromatic";
+import { FaPlay, FaPause } from "react-icons/fa";
 
 import { rgb } from "d3-color";
 import {
@@ -24,6 +25,13 @@ const INITIAL_VIEW_STATE = {
   bearing: 0,
 };
 
+const MIN_ZOOM = 1.5;
+const MAX_ZOOM = 10;
+const MIN_LATITUDE = -85.0511;
+const MAX_LATITUDE = 85.0511;
+const MIN_LONGITUDE = -10;
+const MAX_LONGITUDE = 10;
+
 function DateSlider({
   dates,
   selectedDate,
@@ -36,44 +44,48 @@ function DateSlider({
       style={{
         backgroundColor: "white",
         padding: "10px",
-        borderRadius: "4px",
+        borderRadius: "20px",
         boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
         zIndex: 2,
-        width: "80%",
+        width: "400px",
         maxWidth: "800px",
         margin: "20px auto",
       }}
     >
       <div
-        style={{ marginBottom: "8px", fontWeight: "bold", textAlign: "center" }}
+        style={{ fontWeight: "bold", textAlign: "center" }}
         className="dark-text"
       >
-        State Values Over Time:{" "}
         {selectedDate ? format(new Date(selectedDate), "PPP") : "Select Date"}
       </div>
-      <Slider
-        min={0}
-        max={dates.length - 1}
-        step={1}
-        value={[dates.indexOf(selectedDate)]}
-        dates={dates}
-        setSelectedDate={setSelectedDate}
-        className="w-full"
-      />
-      <div
-        style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}
-      >
+      <div style={{ display: "flex", width: "100%" }}>
+        {/* Play/Pause icon */}
         <button
           onClick={onPlayToggle}
           style={{
-            padding: "8px 16px",
-            backgroundColor: "#4CAF50",
-            color: "white",
-            borderRadius: "4px",
+            background: "none",
+            border: "none",
+            outline: "none",
+            cursor: "pointer",
+            padding: 0,
+            marginLeft: "20px",
+            marginTop: "15px",
+            color: "black",
+            fontSize: "25px", // Control size
+            height: "32px",
           }}
         >
-          {playing ? "Pause" : "Play"}
+          {playing ? <FaPause /> : <FaPlay />}
         </button>
+        <Slider
+          min={0}
+          max={dates.length - 1}
+          step={1}
+          value={[dates.indexOf(selectedDate)]}
+          dates={dates}
+          setSelectedDate={setSelectedDate}
+          className="w-full"
+        />
       </div>
     </div>
   );
@@ -94,6 +106,8 @@ function StateMap() {
   const intervalRef = useRef(null);
   const [selectedState, setSelectedState] = useState(null); // You might use this to track the active state for county view
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
+  const [showSidebar, setShowSidebar] = useState(false); // for state panel
+  const [showSlider, setShowSlider] = useState(true); // for date slider
 
   const colorScale = scaleSequential(interpolateYlOrRd).domain([0.5, 10]); // 1 = Very Low, 5 = Very High
 
@@ -323,6 +337,8 @@ function StateMap() {
       }
 
       setSelectedState(clickedFeature.properties.NAME);
+      setShowSidebar(true);
+      setShowSlider(false);
 
       if (filteredCounties.length === 0) {
         console.warn("No county data");
@@ -392,7 +408,14 @@ function StateMap() {
       console.log(longitude, latitude, zoom);
       // Adjust zoom level as needed; your current adjustment seems arbitrary,
       // you might want to reconsider the zoom: 6 + zoom / 3 part
-      setViewState({ longitude, latitude, zoom: 6 + zoom / 3 });
+      setViewState((prevViewState) => ({
+        ...prevViewState,
+        longitude,
+        latitude,
+        zoom: 6 + zoom / 3,
+        transitionDuration: 300,
+        transitionInterpolator: new FlyToInterpolator(),
+      }));
     },
     [setViewState, countyData, countyGeoJson, setSelectedState],
   ); // Added dependencies
@@ -400,11 +423,34 @@ function StateMap() {
   const handleDateChange = (newDate) => {
     setSelectedDate(newDate);
   };
+  const USA_BOUNDS = {
+    west: -130, // More west, near Aleutians
+    east: -60, // Far east coast + a bit ocean
+    south: 20, // Hawaii latitude
+    north: 55, // Northern border of US (Montana/Canada)
+  };
   const handleViewStateChange = useCallback(
     ({ viewState: newViewState, interactionState }) => {
+      let { longitude, latitude, zoom } = newViewState;
+
+      if (zoom < MIN_ZOOM) zoom = MIN_ZOOM;
+      if (zoom > MAX_ZOOM) zoom = MAX_ZOOM;
+      if (latitude < MIN_LATITUDE) latitude = MIN_LATITUDE;
+      if (latitude > MAX_LATITUDE) latitude = MAX_LATITUDE;
+      if (longitude < MIN_LONGITUDE) longitude = MIN_LONGITUDE;
+      if (longitude > MAX_LONGITUDE) longitude = MAX_LONGITUDE;
+
       if (interactionState.isZooming) {
         console.log("Scrolling detected!");
-        setViewState(INITIAL_VIEW_STATE); // Keep the reset logic
+        setViewState((prev) => ({
+          ...prev,
+          ...newViewState,
+          transitionDuration: 0, // 🌟 Short smooth scroll zoom
+          transitionInterpolator: new FlyToInterpolator(),
+        }));
+        setShowSidebar(false);
+        setShowSlider(true);
+
         setCountyGeoJson(null);
         setCountyLayer(null);
         setSelectedState(null);
@@ -478,20 +524,56 @@ function StateMap() {
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        <div className="map-container" style={{ position: "relative" }}>
+      <div style={{ display: "flex", height: "100vh", width: "100vw" }}>
+        {showSidebar && selectedState && (
+          <div
+            style={{
+              width: "33%", // 1/3 of page
+              height: "100vh",
+              backgroundColor: "white",
+              color: "black",
+              padding: "20px",
+              boxShadow: "2px 0px 6px rgba(0,0,0,0.1)",
+              flexDirection: "column",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-start",
+              fontSize: "24px",
+              fontWeight: "bold",
+              // transition: "transform 10s ease", // 🌟 Smooth slide transition
+              // transform: showSidebar ? "translateX(0)" : "translateX(-100%)", // 🌟 Slide in/out
+              // position: "relative", // 🌟 stay inline with map
+              // zIndex: 100, // 🌟 on top
+            }}
+          >
+            <div>MEOW</div>
+            <div>{selectedState}</div>
+            <div>Graphs / Stats Here</div>
+          </div>
+        )}
+        <div
+          className="map-container"
+          style={{
+            position: "relative",
+            flexGrow: 1,
+            width: showSidebar ? "67%" : "100%", // Shrink map if sidebar open
+          }}
+        >
+          {" "}
           <div style={{ position: "relative", height: "100%" }}>
             <DeckGL
               style={{ width: "100%", height: "100% " }}
               viewState={viewState}
               onViewStateChange={handleViewStateChange}
-              controller={true}
+              controller={{
+                scrollZoom: true,
+                dragPan: true,
+                dragRotate: false,
+                doubleClickZoom: true,
+                touchZoom: true,
+                minZoom: 1.5, // 🌟 Match minZoom here
+                maxZoom: 10,
+              }}
               layers={[
                 tileLayer,
                 boxLayer,
@@ -566,11 +648,30 @@ function StateMap() {
               }}
             />
           </div>
-          {latestStateMetrics && (
+          {showSlider && allStateMetrics && (
             <div
               style={{
                 position: "absolute",
                 top: "20px",
+                left: "20px",
+                zIndex: 10,
+              }}
+            >
+              <DateSlider
+                dates={dateValues}
+                selectedDate={selectedDate}
+                onDateChange={handleDateChange}
+                onPlayToggle={togglePlay}
+                playing={playing}
+                setSelectedDate={setSelectedDate}
+              />
+            </div>
+          )}
+          {latestStateMetrics && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: "20px",
                 right: "20px",
                 backgroundColor: "white",
                 padding: "10px",
@@ -629,7 +730,9 @@ function StateMap() {
               });
             }}
             style={{
+              position: "absolute",
               marginTop: "20px",
+              marginLeft: "20px",
               padding: "8px 16px",
               backgroundColor: "#007bff", // Example blue color
               color: "white",
@@ -640,17 +743,6 @@ function StateMap() {
           >
             Back to US Map
           </button>
-        )}
-
-        {allStateMetrics && (
-          <DateSlider
-            dates={dateValues}
-            selectedDate={selectedDate}
-            onDateChange={handleDateChange}
-            onPlayToggle={togglePlay}
-            playing={playing}
-            setSelectedDate={setSelectedDate}
-          />
         )}
       </div>
     </>
