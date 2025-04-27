@@ -20,6 +20,7 @@ import {
 } from "../utilities/transfromNonContiguousStates.js";
 import Slider from "./Slider.jsx";
 import { format } from "date-fns";
+import StateTimeSeriesGraph from "./StateGraph.jsx";
 
 const INITIAL_VIEW_STATE = {
   longitude: -98.5795,
@@ -685,6 +686,44 @@ function StateMap() {
     return <div>Loading...</div>;
   }
 
+  const countyList = () => {
+    if (!allCountyMetrics) return <></>;
+  
+    return (
+      <div style={{ width: '100%' }}>
+        <div
+          style={{
+            display: 'flex',
+            'flex-wrap': 'wrap',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: '12px',
+          }}
+        >
+          {allCountyMetrics.map((county, index) => (
+            <div
+              key={index}
+              style={{
+                padding: '12px',
+                borderRadius: '8px',
+                backgroundColor: '#f9f9f9',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              }}
+            >
+              <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>
+                {county.counties_served}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#555' }}>
+                {county.wval_category || 'Unknown'}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+  
+  
+
   return (
     <>
       <div style={{ display: "flex", height: "100vh", width: "100vw" }}>
@@ -692,7 +731,7 @@ function StateMap() {
           <div
             style={{
               width: "33%", // 1/3 of page
-              height: "100vh",
+              height: "89vh",
               backgroundColor: "white",
               color: "black",
               padding: "20px",
@@ -709,9 +748,10 @@ function StateMap() {
               // zIndex: 100, // 🌟 on top
             }}
           >
-            <div>MEOW</div>
+            <br />
             <div>{selectedState}</div>
-            <div>Graphs / Stats Here</div>
+            <StateTimeSeriesGraph stateName={selectedState} />
+            <div style={{overflowY: 'auto', height: '33vh'}}>{countyList()}</div>
           </div>
         )}
         <div
