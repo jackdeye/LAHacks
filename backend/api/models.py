@@ -29,3 +29,11 @@ class StateTimeseries(models.Model):
     class Meta:
         managed = False
         db_table = "state_timeseries"
+
+class EmailList(models.Model):
+    email = models.TextField(db_column="Email", primary_key=True)
+    location = models.TextField(db_column="Location")
+
+    class Meta:
+        managed = True
+        db_table = "email_list"

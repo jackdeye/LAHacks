@@ -1,7 +1,7 @@
 from django.db.models import Avg
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
-
+from .tasks import *
 from collections import defaultdict
 
 from .models import CountyCurrent, StateTimeseries
@@ -282,3 +282,10 @@ def get_national(request):
             return JsonResponse(model_to_dict(record), safe=False)
 
     return JsonResponse({"error": "GET request required"}, status=405)
+
+def force_email(request):
+    if request.method == "GET":
+        send_email()
+        return JsonResponse({"response": "Emails on the way"}, status=200)
+    else:
+        return JsonResponse({"error": "GET request required"}, status=405)
