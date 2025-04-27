@@ -3,13 +3,11 @@ import { WebMercatorViewport, FlyToInterpolator } from "@deck.gl/core";
 import DeckGL from "@deck.gl/react";
 import { TileLayer } from "@deck.gl/geo-layers";
 import { GeoJsonLayer, BitmapLayer } from "@deck.gl/layers";
-import { GeoJsonLayer } from "@deck.gl/layers";
 import { MaskExtension } from '@deck.gl/extensions';
 import statesData from "../assets/gz_2010_us_040_00_5m.json";
 import countyData from "../assets/gz_2010_us_050_00_5m.json";
 import countyCentroidData from "../assets/counties-centroids.json"; // Imported county centroid data
 import { Delaunay } from "d3-delaunay";
-import { scaleLinear } from "d3-scale";
 import { scaleLinear, scaleSequential } from "d3-scale";
 import { interpolateYlOrRd } from "d3-scale-chromatic";
 import { FaPlay, FaPause } from "react-icons/fa";
@@ -396,9 +394,6 @@ function StateMap() {
     let entry = allCountyMetrics.find(
       (item) => item.counties_served == countyName,
     );
-    let entry = allCountyMetrics.find(
-      (item) => item.counties_served == countyName,
-    );
 
     if (!entry) {
       return [200, 200, 200, 150];
@@ -455,6 +450,12 @@ function StateMap() {
       if (!clickedFeature || !clickedFeature.properties) {
         return;
       }
+
+      if (clickedFeature.properties.LSAD && clickedFeature.properties.LSAD == "County") {
+        return;
+      }
+
+      console.log(clickedFeature);
 
       const stateFips = clickedFeature.properties.STATE;
 
@@ -600,7 +601,6 @@ function StateMap() {
         }));
         setShowSidebar(false);
         setShowSlider(true);
-
         setCountyGeoJson(null);
         setCountyLayer(null);
         setSelectedState(null);
@@ -637,10 +637,6 @@ function StateMap() {
     const countyLayer =
       countyGeoJson &&
       new GeoJsonLayer({
-    // New layer for counties
-    const countyLayer =
-      countyGeoJson &&
-      new GeoJsonLayer({
         id: "county-layer",
         data: countyGeoJson,
         pickable: true, // Make counties pickable
@@ -659,32 +655,16 @@ function StateMap() {
             ? baseColor.map((c, i) => (i < 3 ? Math.min(c + 50, 255) : 220))
             : baseColor;
         },
-          //console.log(feature);
-          const baseColor = getCountyColor(feature.properties.NAME);
-          const isHovered =
-            hoveredState &&
-            hoveredState.properties.NAME === feature.properties.NAME;
-
-          return isHovered
-            ? baseColor.map((c, i) => (i < 3 ? Math.min(c + 50, 255) : 220))
-            : baseColor;
-        },
         getLineColor: [50, 50, 50, 255], // Darker line color
         getLineWidth: 1,
         lineWidthMinPixels: 0.5,
-        onHover: ({ object }) => setHoveredState(object),
         onHover: ({ object }) => setHoveredState(object),
         // Add getFillColor based on county metrics if you have them
         updateTriggers: {
           getFillColor: [allCountyMetrics, countyGeoJson], // Added countyGeoJson as trigger
         },
       });
-        updateTriggers: {
-          getFillColor: [allCountyMetrics, countyGeoJson], // Added countyGeoJson as trigger
-        },
-      });
 
-    setCountyLayer(countyLayer);
     setCountyLayer(countyLayer);
   }, [allCountyMetrics, countyGeoJson, hoveredState]);
 
@@ -764,19 +744,17 @@ function StateMap() {
                   object &&
                   object.properties
                 ) {
-                if (
-                  layer &&
-                  layer.id === "county-layer" &&
-                  object &&
-                  object.properties
-                ) {
+                  if (!allCountyMetrics) return null;
+                  const countyData = allCountyMetrics?.find((item) => item.counties_served === object.properties.NAME);
+
+                  //if (!countyData) return null;
+                  
                   return {
                     html: `
                       <div style="padding: 8px; background: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1)">
-                       <div><b>${object.properties.NAME} County</b></div> {/* Assuming county NAME */}
-                       <div>State FIPS: ${object.properties.STATEFP}</div> {/* Assuming county STATEFP */}
-                       <div>County FIPS: ${object.properties.COUNTYFP}</div> {/* Assuming county COUNTYFP */}
-                       ${/* Add county specific data if available */ ""}
+                       <div><b>${object.properties.NAME} County</b></div>
+                       <div>Category: ${!countyData || !countyData.wval_category ? "N/A" : countyData.wval_category}</div>
+                       <div>Date Range: ${!countyData || !countyData['reporting week'] ? "N/A" : countyData['reporting week']}</div>
                      </div>
                    `,
                     style: { backgroundColor: "transparent", border: "none" },

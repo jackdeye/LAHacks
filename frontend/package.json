@@ -10,13 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@deck.gl/geo-layers": "^9.1.11",
     "@deck.gl/extensions": "^9.1.11",
+    "@deck.gl/geo-layers": "^9.1.11",
     "@deck.gl/layers": "^9.1.11",
     "@deck.gl/react": "^9.1.11",
     "d3-color": "^3.1.0",
-    "d3-interpolate": "^3.0.1",
     "d3-delaunay": "^6.0.4",
+    "d3-interpolate": "^3.0.1",
     "d3-scale": "^4.0.2",
     "d3-scale-chromatic": "^3.1.0",
     "date-fns": "^4.1.0",
