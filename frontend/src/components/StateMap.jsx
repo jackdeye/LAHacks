@@ -19,6 +19,7 @@ import {
   STATE_BOXES,
 } from "../utilities/transfromNonContiguousStates.js";
 import Slider from "./Slider.jsx";
+import Predictions from "./Predictions.jsx";
 import { format } from "date-fns";
 import StateTimeSeriesGraph from "./StateGraph.jsx";
 
@@ -127,6 +128,8 @@ function StateMap() {
   const [voronoiLayer, setVoronoiLayer] = useState(null); // State for Voronoi DeckGL layer
   const [voronoiMaskLayer, setVoronoiMaskLayer] = useState(null);
   const [displayVoronoi, setDisplayVoronoi] = useState(false);
+  const [predictionData, setPredictionData] = useState(null);
+  const [selectedWeek, setSelectedWeek] = useState(null);
 
 
   const [showSidebar, setShowSidebar] = useState(false); // for state panel
@@ -134,13 +137,6 @@ function StateMap() {
 
   const colorScale = scaleSequential(interpolateYlOrRd).domain([0.5, 10]); // 1 = Very Low, 5 = Very High
 
-  /**
-   * Generates Voronoi polygons from county centroid data and returns them as a GeoJSON FeatureCollection.
-   * Each feature in the collection represents a Voronoi cell and includes properties from the original centroid data.
-   *
-   * @param {object} countyCentroidData - A GeoJSON FeatureCollection of Point features representing county centroids.
-   * @returns {object} A GeoJSON FeatureCollection of Polygon features representing the Voronoi tessellation.
-   */
   function generateVoronoiPolygons(countyCentroidData) {
     // Add a check to ensure countyCentroidData and its features property are defined
     if (!countyCentroidData || !countyCentroidData.features || !Array.isArray(countyCentroidData.features)) {
@@ -179,12 +175,12 @@ function StateMap() {
       // GeoJSON Polygon coordinates are structured as [ [ [x1, y1], [x2, y2], ... ] ]
       // Ensure the polygon is closed (first point equals last point) if it's not already
       if (polygon && polygon.length > 0) {
-          // Check if the polygon is closed. If not, close it.
-          const firstPoint = polygon[0];
-          const lastPoint = polygon[polygon.length - 1];
-          if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
-              polygon.push(firstPoint); // Close the polygon loop
-          }
+        // Check if the polygon is closed. If not, close it.
+        const firstPoint = polygon[0];
+        const lastPoint = polygon[polygon.length - 1];
+        if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
+          polygon.push(firstPoint); // Close the polygon loop
+        }
 
         const geoJsonPolygon = {
           type: "Polygon",
@@ -247,7 +243,6 @@ function StateMap() {
     }
   }, [voronoiGeoJson, displayVoronoi]); // Dependency on voronoiGeoJson
 
-
   // Fetch initial data (latest metrics only)
   useEffect(() => {
     const loadLatestStateData = async () => {
@@ -267,6 +262,7 @@ function StateMap() {
     };
     loadLatestStateData();
   }, []);
+
   const tileLayer = new TileLayer({
     id: "base-map-tile-layer",
     data: "https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
@@ -318,7 +314,6 @@ function StateMap() {
     }
   }, [allStateMetrics]);
 
-  // Create the state layer when data is available
   useEffect(() => {
     if (!stateData || !latestStateMetrics || !selectedDate) return;
 
@@ -331,7 +326,6 @@ function StateMap() {
       extruded: false,
       wireframe: false,
       getFillColor: (feature) => {
-        // Only color states if county data is not loaded
         if (countyGeoJson) {
           return [200, 200, 200, 50]; // Dim states when county data is visible
         }
@@ -351,14 +345,11 @@ function StateMap() {
       autoHighlight: true,
       highlightColor: [255, 255, 255, 100],
       updateTriggers: {
-        getFillColor: [selectedDate, allStateMetrics, countyGeoJson], // Added countyGeoJson as trigger
+        getFillColor: [selectedDate, allStateMetrics, countyGeoJson, predictionData],
       },
     });
 
     setStateLayer(newStateLayer); // Set the state layer
-
-
-
 
     const newVoronoiMaskLayer = new GeoJsonLayer({
       id: "mask-layer", // Renamed ID
@@ -375,7 +366,8 @@ function StateMap() {
     hoveredState,
     selectedDate,
     countyGeoJson,
-    allStateMetrics // Added allStateMetrics dependency
+    allStateMetrics,
+    predictionData// Added predictionData dependency
   ]); // Added countyGeoJson
 
   const boxLayer = new GeoJsonLayer({
@@ -388,9 +380,19 @@ function StateMap() {
     getLineWidth: 1,
   });
 
-  const getStateColor = (stateName) => {
-    if (!allStateMetrics || !selectedDate) return [200, 200, 200, 150]; // Use allStateMetrics and selectedDate
+  const handleWeekSelect = (weekNumber, weekData) => {
+    setSelectedWeek(weekNumber);
+    setPredictionData(weekData);
+  };
 
+  const getStateColor = (stateName) => {
+    if (predictionData && predictionData[stateName] !== undefined) {
+      const predictionValue = predictionData[stateName];
+      const intensity = Math.min(255, Math.floor(predictionValue * 50));
+      return [intensity, 255 - intensity, 0, 255];
+    }
+
+    if (!allStateMetrics || !selectedDate) return [200, 200, 200, 150]; // Use allStateMetrics and selectedDate
     const stateDataForDate = allStateMetrics[stateName]?.find(
       (item) => item.ending_date === selectedDate,
     );
@@ -442,10 +444,10 @@ function StateMap() {
 
   const wvals = latestStateMetrics
     ? Object.values(latestStateMetrics)
-        .map((m) => m.state_territory_wval)
-        .filter(Number.isFinite)
-        .map((m) => m.state_territory_wval)
-        .filter(Number.isFinite)
+      .map((m) => m.state_territory_wval)
+      .filter(Number.isFinite)
+      .map((m) => m.state_territory_wval)
+      .filter(Number.isFinite)
     : [];
   const minVal = wvals?.length ? Math.min(...wvals) : 0;
   const maxVal = wvals?.length ? Math.max(...wvals) : 10;
@@ -453,6 +455,9 @@ function StateMap() {
   // --- MODIFIED onClickGeoJson FUNCTION ---
   const onClickGeoJson = useCallback(
     (event) => {
+
+      setPredictionData(null);
+      setSelectedWeek(null);
       let minLng = null;
       let maxLng = null;
       let minLat = null;
@@ -525,50 +530,50 @@ function StateMap() {
         if (maxLat === null || coord[1] > maxLat) maxLat = coord[1];
       };
 
-        if (geometry.type === "Polygon") {
-          // Iterate over rings (exterior and interior)
-          geometry.coordinates.forEach((ring) => {
+      if (geometry.type === "Polygon") {
+        // Iterate over rings (exterior and interior)
+        geometry.coordinates.forEach((ring) => {
+          // Iterate over coordinates in each ring
+          ring.forEach((coord) => {
+            updateBounds(coord);
+          });
+        });
+      } else if (geometry.type === "MultiPolygon") {
+        // Iterate over individual polygons within the MultiPolygon
+        geometry.coordinates.forEach((polygon) => {
+          // Iterate over rings within each polygon
+          polygon.forEach((ring) => {
             // Iterate over coordinates in each ring
             ring.forEach((coord) => {
               updateBounds(coord);
             });
           });
-        } else if (geometry.type === "MultiPolygon") {
-          // Iterate over individual polygons within the MultiPolygon
-          geometry.coordinates.forEach((polygon) => {
-            // Iterate over rings within each polygon
-            polygon.forEach((ring) => {
-              // Iterate over coordinates in each ring
-              ring.forEach((coord) => {
-                updateBounds(coord);
-              });
-            });
-          });
-        } else {
-          // Handle other geometry types if necessary (e.g., Point, LineString)
-          console.warn("Unsupported geometry type for bounding box calculation:", geometry.type);
-          return; // Exit if geometry type is not handled
-        }
+        });
+      } else {
+        // Handle other geometry types if necessary (e.g., Point, LineString)
+        console.warn("Unsupported geometry type for bounding box calculation:", geometry.type);
+        return; // Exit if geometry type is not handled
+      }
 
-        // Check if any coordinates were processed (in case of empty geometry)
-        if (minLng === null) {
-          console.warn("No valid coordinates found in geometry.");
-          return;
-        }
+      // Check if any coordinates were processed (in case of empty geometry)
+      if (minLng === null) {
+        console.warn("No valid coordinates found in geometry.");
+        return;
+      }
 
-        console.log(minLng, maxLng, minLat, maxLat);
+      console.log(minLng, maxLng, minLat, maxLat);
 
-        const viewport = new WebMercatorViewport();
-        const { longitude, latitude, zoom } = viewport.fitBounds(
-          [
-            [minLng, minLat],
-            [maxLng, maxLat],
-          ],
-          // Optional: Add padding if needed
-          // {
-          //  padding: 20, // Added padding for better view
-          // },
-        );
+      const viewport = new WebMercatorViewport();
+      const { longitude, latitude, zoom } = viewport.fitBounds(
+        [
+          [minLng, minLat],
+          [maxLng, maxLat],
+        ],
+        // Optional: Add padding if needed
+        // {
+        //  padding: 20, // Added padding for better view
+        // },
+      );
 
       console.log(longitude, latitude, zoom);
       // Adjust zoom level as needed; your current adjustment seems arbitrary,
@@ -688,7 +693,7 @@ function StateMap() {
 
   const countyList = () => {
     if (!allCountyMetrics) return <></>;
-  
+
     return (
       <div style={{ width: '100%' }}>
         <div
@@ -721,8 +726,6 @@ function StateMap() {
       </div>
     );
   };
-  
-  
 
   return (
     <>
@@ -751,7 +754,7 @@ function StateMap() {
             <br />
             <div>{selectedState}</div>
             <StateTimeSeriesGraph stateName={selectedState} />
-            <div style={{overflowY: 'auto', height: '33vh'}}>{countyList()}</div>
+            <div style={{ overflowY: 'auto', height: '33vh' }}>{countyList()}</div>
           </div>
         )}
         <div
@@ -781,7 +784,7 @@ function StateMap() {
                 tileLayer,
                 boxLayer,
                 ...(stateLayer ? [stateLayer] : []), // State layer
-                ...(countyLayer ? [countyLayer] : []),, // County layer, renders on top when countyGeoJson is not null
+                ...(countyLayer ? [countyLayer] : []), , // County layer, renders on top when countyGeoJson is not null
                 ...(voronoiLayer ? [voronoiLayer] : []), // Add Voronoi layer
                 ...(voronoiMaskLayer ? [voronoiMaskLayer] : []),
               ]}
@@ -801,7 +804,7 @@ function StateMap() {
                   const countyData = allCountyMetrics?.find((item) => item.counties_served === object.properties.NAME);
 
                   //if (!countyData) return null;
-                  
+
                   return {
                     html: `
                       <div style="padding: 8px; background: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1)">
@@ -953,42 +956,13 @@ function StateMap() {
               </div>
 
               {/* Four buttons */}
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                }}
-              >
-                <button
-                  style={buttonStyle}
-                  onMouseEnter={(e) => (e.target.style.opacity = "0.8")} // 🌟 slight transparent
-                  onMouseLeave={(e) => (e.target.style.opacity = "1")}
-                >
-                  Week 1
-                </button>
-                <button
-                  style={buttonStyle}
-                  onMouseEnter={(e) => (e.target.style.opacity = "0.8")} // 🌟 slight transparent
-                  onMouseLeave={(e) => (e.target.style.opacity = "1")}
-                >
-                  Week 2
-                </button>
-                <button
-                  style={buttonStyle}
-                  onMouseEnter={(e) => (e.target.style.opacity = "0.8")} // 🌟 slight transparent
-                  onMouseLeave={(e) => (e.target.style.opacity = "1")}
-                >
-                  Week 3
-                </button>
-                <button
-                  style={buttonStyle}
-                  onMouseEnter={(e) => (e.target.style.opacity = "0.8")} // 🌟 slight transparent
-                  onMouseLeave={(e) => (e.target.style.opacity = "1")}
-                >
-                  Week 4
-                </button>
-              </div>
+
+
+              // Then modify your buttons to use this function:
+              <Predictions
+                buttonStyle={buttonStyle}
+                onWeekSelect={handleWeekSelect}
+              />
             </div>
           )}
         </div>
