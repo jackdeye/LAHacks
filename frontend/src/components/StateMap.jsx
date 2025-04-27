@@ -55,7 +55,7 @@ function DateSlider({
   selectedDate,
   onPlayToggle,
   playing,
-  setSelectedDate,
+  setSelectedDate
 }) {
   return (
     <div
@@ -387,9 +387,12 @@ function StateMap() {
 
   const getStateColor = (stateName) => {
     if (predictionData && predictionData[stateName] !== undefined) {
+      console.log(stateName);
       const predictionValue = predictionData[stateName];
       const intensity = Math.min(255, Math.floor(predictionValue * 50));
       return [intensity, 255 - intensity, 0, 255];
+    } else if (predictionData) {
+      return [200, 200, 200, 150];
     }
 
     if (!allStateMetrics || !selectedDate) return [200, 200, 200, 150]; // Use allStateMetrics and selectedDate
@@ -587,7 +590,7 @@ function StateMap() {
         transitionInterpolator: new FlyToInterpolator(),
       }));
     },
-    [setViewState, countyData, countyGeoJson, setSelectedState],
+    [setViewState, countyData, countyGeoJson, setSelectedState, predictionData],
   ); // Added dependencies
 
   const handleDateChange = (newDate) => {
@@ -628,7 +631,7 @@ function StateMap() {
         setViewState(newViewState);
       }
     },
-    [],
+    [predictionData],
   );
   useEffect(() => {
     if (playing) {
