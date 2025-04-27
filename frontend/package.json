@@ -10,7 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@deck.gl/extensions": "^9.1.11",
+=======
+    "@deck.gl/geo-layers": "^9.1.11",
+>>>>>>> d023c7f (actual map')
     "@deck.gl/layers": "^9.1.11",
     "@deck.gl/react": "^9.1.11",
     "d3-color": "^3.1.0",

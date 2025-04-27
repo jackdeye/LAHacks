@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { WebMercatorViewport } from "@deck.gl/core";
 import DeckGL from "@deck.gl/react";
+<<<<<<< HEAD
 import { GeoJsonLayer } from "@deck.gl/layers";
 import { MaskExtension } from '@deck.gl/extensions';
+=======
+import { TileLayer } from "@deck.gl/geo-layers";
+import { GeoJsonLayer, BitmapLayer } from "@deck.gl/layers";
+>>>>>>> d023c7f (actual map')
 import statesData from "../assets/gz_2010_us_040_00_5m.json";
 import countyData from "../assets/gz_2010_us_050_00_5m.json";
 import countyCentroidData from "../assets/counties-centroids.json"; // Imported county centroid data
@@ -236,6 +241,25 @@ function StateMap() {
     };
     loadLatestStateData();
   }, []);
+  const tileLayer = new TileLayer({
+    id: "base-map-tile-layer",
+    data: "https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+    minZoom: 0,
+    maxZoom: 19,
+    tileSize: 256,
+    renderSubLayers: (props) => {
+      const {
+        bbox: { west, south, east, north },
+        data,
+      } = props.tile;
+
+      return new BitmapLayer(props, {
+        data: null,
+        image: data,
+        bounds: [west, south, east, north],
+      });
+    },
+  });
 
   // Fetch historical data (runs after initial render)
   useEffect(() => {
@@ -306,6 +330,7 @@ function StateMap() {
     });
 
     setStateLayer(newStateLayer); // Set the state layer
+<<<<<<< HEAD
 
 
 
@@ -319,13 +344,18 @@ function StateMap() {
 
     setVoronoiMaskLayer(newVoronoiMaskLayer);
 
+=======
+>>>>>>> d023c7f (actual map')
   }, [
     stateData,
     latestStateMetrics,
     hoveredState,
     selectedDate,
     countyGeoJson,
+<<<<<<< HEAD
     allStateMetrics // Added allStateMetrics dependency
+=======
+>>>>>>> d023c7f (actual map')
   ]); // Added countyGeoJson
 
   const boxLayer = new GeoJsonLayer({
@@ -370,7 +400,11 @@ function StateMap() {
       case "Low":
         wval_cat = 2;
         break;
+<<<<<<< HEAD
       case "Moderate":
+=======
+      case "Medium":
+>>>>>>> d023c7f (actual map')
         wval_cat = 3;
         break;
       case "High":
@@ -379,8 +413,11 @@ function StateMap() {
       case "Very High":
         wval_cat = 5;
         break;
+<<<<<<< HEAD
       default: // Handle cases where category is not one of the defined
         return [200, 200, 200, 150];
+=======
+>>>>>>> d023c7f (actual map')
     }
     const color = rgb(colorScale(wval_cat));
     return [color.r, color.g, color.b, 200];
@@ -397,13 +434,17 @@ function StateMap() {
   // --- MODIFIED onClickGeoJson FUNCTION ---
   const onClickGeoJson = useCallback(
     (event) => {
+<<<<<<< HEAD
       console.log("blah", countyCentroidData);
+=======
+>>>>>>> d023c7f (actual map')
       let minLng = null;
       let maxLng = null;
       let minLat = null;
       let maxLat = null;
 
       const clickedFeature = event.object;
+<<<<<<< HEAD
       if (!clickedFeature || !clickedFeature.properties) {
         return;
       }
@@ -512,6 +553,115 @@ function StateMap() {
         // you might want to reconsider the zoom: 6 + zoom / 3 part
         // Let's use the calculated zoom directly from fitBounds for a start
         setViewState({ longitude, latitude, zoom: 6 + zoom / 3 });
+=======
+      const geometry = clickedFeature.geometry;
+
+      if (!clickedFeature || !clickedFeature.properties) {
+        return;
+      }
+
+      const stateFips = clickedFeature.properties.STATE;
+
+      const loadAllCountyData = async () => {
+        try {
+          const response = await fetch(
+            "http://localhost:8000/api/county?state=".concat(
+              clickedFeature.properties.NAME,
+            ),
+          );
+          const metrics = await response.json();
+          console.log(metrics);
+          setAllCountyMetrics(metrics);
+        } catch (error) {
+          console.error("Error loading all county data:", error);
+        }
+      };
+
+      loadAllCountyData();
+
+      setSelectedDate(dateValues[dateValues.length - 1]);
+
+      const filteredCounties = countyData.features.filter(
+        (county) => county.properties.STATE === stateFips,
+      );
+
+      if (!stateFips) {
+        console.warn("Clicked state missing FIPS");
+        return;
+      }
+
+      setSelectedState(clickedFeature.properties.NAME);
+
+      if (filteredCounties.length === 0) {
+        console.warn("No county data");
+        return;
+      }
+
+      const stateCountyGeoJson = {
+        type: "FeatureCollection",
+        features: filteredCounties,
+      };
+
+      setCountyGeoJson(stateCountyGeoJson);
+
+      // Helper function to update min/max bounds
+      const updateBounds = (coord) => {
+        if (minLng === null || coord[0] < minLng) minLng = coord[0];
+        if (maxLng === null || coord[0] > maxLng) maxLng = coord[0];
+        if (minLat === null || coord[1] < minLat) minLat = coord[1];
+        if (maxLat === null || coord[1] > maxLat) maxLat = coord[1];
+      };
+
+      if (geometry.type === "Polygon") {
+        // Iterate over rings (exterior and interior)
+        geometry.coordinates.forEach((ring) => {
+          // Iterate over coordinates in each ring
+          ring.forEach((coord) => {
+            updateBounds(coord);
+          });
+        });
+      } else if (geometry.type === "MultiPolygon") {
+        // Iterate over individual polygons within the MultiPolygon
+        geometry.coordinates.forEach((polygon) => {
+          // Iterate over rings within each polygon
+          polygon.forEach((ring) => {
+            // Iterate over coordinates in each ring
+            ring.forEach((coord) => {
+              updateBounds(coord);
+            });
+          });
+        });
+      } else {
+        // Handle other geometry types if necessary (e.g., Point, LineString)
+        console.warn("Unsupported geometry type:", geometry.type);
+        return; // Exit if geometry type is not handled
+      }
+
+      // Check if any coordinates were processed (in case of empty geometry)
+      if (minLng === null) {
+        console.warn("No valid coordinates found in geometry.");
+        return;
+      }
+
+      console.log(minLng, maxLng, minLat, maxLat);
+
+      const viewport = new WebMercatorViewport();
+      const { longitude, latitude, zoom } = viewport.fitBounds(
+        [
+          [minLng, minLat],
+          [maxLng, maxLat],
+        ],
+        // Optional: Add padding if needed
+        // {
+        //   padding: 20,
+        // },
+      );
+
+      console.log(longitude, latitude, zoom);
+      // Adjust zoom level as needed; your current adjustment seems arbitrary,
+      // you might want to reconsider the zoom: 6 + zoom / 3 part
+      setViewState({ longitude, latitude, zoom: 6 + zoom / 3 });
+>>>>>>> d023c7f (actual map')
     },
     [setViewState, countyData, countyGeoJson, setSelectedState],
   ); // Added dependencies
@@ -521,7 +671,10 @@ function StateMap() {
   };
   const handleViewStateChange = useCallback(
     ({ viewState: newViewState, interactionState }) => {
+<<<<<<< HEAD
       // Check if the user is zooming
+=======
+>>>>>>> d023c7f (actual map')
       if (interactionState.isZooming) {
         console.log("Scrolling detected!");
         setViewState(INITIAL_VIEW_STATE); // Keep the reset logic
@@ -529,9 +682,15 @@ function StateMap() {
         setCountyLayer(null);
         setSelectedState(null);
         setAllCountyMetrics(null);
+<<<<<<< HEAD
        } else {
            setViewState(newViewState);
        }
+=======
+      } else {
+        setViewState(newViewState);
+      }
+>>>>>>> d023c7f (actual map')
     },
     [],
   );
@@ -613,11 +772,15 @@ function StateMap() {
               onViewStateChange={handleViewStateChange}
               controller={true}
               layers={[
+                tileLayer,
                 boxLayer,
                 ...(stateLayer ? [stateLayer] : []), // State layer
                 ...(countyLayer ? [countyLayer] : []), // County layer, renders on top when countyGeoJson is not null
+<<<<<<< HEAD
                 ...(voronoiLayer ? [voronoiLayer] : []), // Add Voronoi layer
                 ...(voronoiMaskLayer ? [voronoiMaskLayer] : []),
+=======
+>>>>>>> d023c7f (actual map')
               ]}
               parameters={{
                 clearColor: [255, 255, 255, 1],
@@ -638,8 +801,13 @@ function StateMap() {
                        <div>State FIPS: ${object.properties.STATEFP}</div> {/* Assuming county STATEFP */}
                        <div>County FIPS: ${object.properties.COUNTYFP}</div> {/* Assuming county COUNTYFP */}
                        ${/* Add county specific data if available */ ""}
+<<<<<<< HEAD
                       </div>
                     `,
+=======
+                     </div>
+                   `,
+>>>>>>> d023c7f (actual map')
                     style: { backgroundColor: "transparent", border: "none" },
                   };
                 }
