@@ -977,14 +977,17 @@ function StateMap() {
         {countyGeoJson && (
           <button
             onClick={() => {
-              setCountyGeoJson(null); // Clear county data
-              setSelectedState(null); // Clear selected state
               // Reset view to the initial US view or a saved US view state
               setViewState({
                 longitude: -98.5795,
                 latitude: 39.8283,
                 zoom: 3,
               });
+              setShowSidebar(false);
+              setShowSlider(true);
+              setCountyGeoJson(null); // Clear county data
+              setCountyLayer(null);
+              setSelectedState(null); // Clear selected state
               setAllCountyMetrics(null); // Also clear county metrics when going back
             }}
             style={{
