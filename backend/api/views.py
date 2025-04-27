@@ -320,9 +320,12 @@ def notify_me(request):
 
 
 def get_predictions(request):
-    predictions = FuturePrediction.objects.all()
-    predictions_list = [prediction.to_dict() for prediction in predictions]
-    return JsonResponse({"predictions": predictions_list})
+    if request.method == "GET":
+        predictions = FuturePrediction.objects.all()
+        predictions_list = [prediction.to_dict() for prediction in predictions]
+        return JsonResponse({"predictions": predictions_list}, status=200)
+    else:
+        return JsonResponse({"error": "GET request required"}, status=405)
 
 
 def force_email(request):
