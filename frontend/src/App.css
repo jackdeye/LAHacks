@@ -1,8 +1,10 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  height: 100vh; /* 🌟 Full height viewport */
+  width: 100vw; /* 🌟 Full width viewport */
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .logo {
@@ -41,11 +43,13 @@
   color: #888;
 }
 .map-container {
-  width: 800px;
-  height: 600px;
-  margin: 20px auto;
-  background: white;
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  width: 100%;
+  height: 95vh;
+  /* margin: 20px auto; */
+  /* background: white; */
+  /* box-shadow:
+    0 4px 8px 0 rgba(0, 0, 0, 0.2),
+    0 6px 20px 0 rgba(0, 0, 0, 0.19); */
 }
 
 .dark-text {
