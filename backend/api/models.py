@@ -30,13 +30,23 @@ class StateTimeseries(models.Model):
         managed = False
         db_table = "state_timeseries"
 
+
 class FuturePrediction(models.Model):
     state = models.TextField(db_column="state", primary_key=True)
-    week_1_prediction = models.FloatField(db_column="Week_1_Predictions")
-    week_2_prediction = models.FloatField()
-    week_3_prediction = models.FloatField()
-    week_4_prediction = models.FloatField()
+    week_1_prediction = models.FloatField(db_column="Week_1_Prediction")
+    week_2_prediction = models.FloatField(db_column="Week_2_Prediction")
+    week_3_prediction = models.FloatField(db_column="Week_3_Prediction")
+    week_4_prediction = models.FloatField(db_column="Week_4_Prediction")
 
     class Meta:
         managed = False
-        db_table = 'future_predictions'
+        db_table = "future_predictions"
+
+    def to_dict(self):
+        return {
+            "state": self.state,
+            "week_1_prediction": self.week_1_prediction,
+            "week_2_prediction": self.week_2_prediction,
+            "week_3_prediction": self.week_3_prediction,
+            "week_4_prediction": self.week_4_prediction,
+        }
