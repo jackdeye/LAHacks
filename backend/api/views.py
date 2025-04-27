@@ -1,6 +1,10 @@
+from collections import defaultdict
+
 from django.db.models import Avg
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
+
+from .models import CountyCurrent, FuturePrediction, StateTimeseries
 from django.views.decorators.csrf import csrf_exempt
 from .tasks import *
 import json
@@ -47,16 +51,12 @@ def get_county(request):
             )
 
         if not state:
-            return JsonResponse(
-                {"error": "Missing 'state' parameter"}, status=400
-            )
+            return JsonResponse({"error": "Missing 'state' parameter"}, status=400)
 
         try:
-            records = ''
+            records = ""
             if not county:
-                records = CountyCurrent.objects.filter(
-                    state_territory__icontains=state
-                )
+                records = CountyCurrent.objects.filter(state_territory__icontains=state)
             else:
                 records = CountyCurrent.objects.filter(
                     state_territory__icontains=state, counties_served__icontains=county
@@ -75,7 +75,11 @@ def get_county(request):
                     wval_cat = entry.get("wval_category")
 
                     if counties_served and wval_cat is not None:
-                        county_names = [name.strip() for name in counties_served.split(',') if name.strip()]
+                        county_names = [
+                            name.strip()
+                            for name in counties_served.split(",")
+                            if name.strip()
+                        ]
                         for county_name in county_names:
                             if county_name:
                                 county_groups_categories[county_name].append(wval_cat)
@@ -86,13 +90,15 @@ def get_county(request):
                 for county_name, wval_list in county_groups_categories.items():
                     if wval_list:
                         averaged_category = average_wval_category(wval_list)
-                        response.append({
-                            "state_territory": records.first().state_territory,
-                            "counties_served": county_name,
-                            "wval_category": averaged_category,
-                            "reporting week": records.first().reporting_week
-                            })
-                        
+                        response.append(
+                            {
+                                "state_territory": records.first().state_territory,
+                                "counties_served": county_name,
+                                "wval_category": averaged_category,
+                                "reporting week": records.first().reporting_week,
+                            }
+                        )
+
                 return JsonResponse(response, safe=False)
             else:
                 wval_categories = [record.wval_category for record in records]
@@ -311,6 +317,13 @@ def notify_me(request):
 
     else:
         return JsonResponse({"error": "POST request required"}, status=405)
+
+
+def get_predictions(request):
+    predictions = FuturePrediction.objects.all()
+    predictions_list = [prediction.to_dict() for prediction in predictions]
+    return JsonResponse({"predictions": predictions_list})
+
 
 def force_email(request):
     if request.method == "GET":
